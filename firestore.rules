@@ -1,0 +1,489 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable Hardened Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isVerifiedOwner(userId) {
+      return isVerifiedUser() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'gulshankumaritggv@gmail.com'
+      );
+    }
+
+    function hasParentUser(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId));
+    }
+
+    function hasParentChallenge(challengeId) {
+      return exists(/databases/$(database)/documents/campusChallenges/$(challengeId));
+    }
+
+    // Validation Blueprints (Anti-Update-Gap)
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['ownerId', 'name', 'email', 'dailyGoalMl', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'ownerId', 'name', 'email', 'phone', 'university', 'preferredColor',
+          'dailyGoalMl', 'memberSince', 'savedIds', 'studentDiscountActive',
+          'studentEmail', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string && data.ownerId == userId && isValidId(data.ownerId)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 120
+        && data.email is string && data.email.size() <= 180
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 40))
+        && (!('university' in data) || (data.university is string && data.university.size() <= 120))
+        && (!('preferredColor' in data) || (data.preferredColor is string && data.preferredColor.size() <= 60))
+        && data.dailyGoalMl is number && data.dailyGoalMl >= 500 && data.dailyGoalMl <= 8000
+        && (!('memberSince' in data) || (data.memberSince is string && data.memberSince.size() <= 40))
+        && (!('savedIds' in data) || (
+          data.savedIds is list
+          && data.savedIds.size() <= 120
+          && (data.savedIds.size() == 0 || data.savedIds[0] is string)
+        ))
+        && (!('studentDiscountActive' in data) || data.studentDiscountActive is bool)
+        && (!('studentEmail' in data) || (data.studentEmail is string && data.studentEmail.size() <= 180))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidHydrationLog(data, userId, dateKey) {
+      return data.keys().hasAll(['ownerId', 'dateKey', 'consumedMl', 'entries', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'dateKey', 'consumedMl', 'entries', 'createdAt', 'updatedAt'])
+        && data.ownerId is string && data.ownerId == userId && isValidId(data.ownerId)
+        && data.dateKey is string && data.dateKey == dateKey && data.dateKey.size() >= 8 && data.dateKey.size() <= 20
+        && data.consumedMl is number && data.consumedMl >= 0 && data.consumedMl <= 25000
+        && data.entries is list && data.entries.size() <= 60
+        && (data.entries.size() == 0 || data.entries[0] is map)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidOrder(data, userId) {
+      return data.keys().hasAll([
+          'ownerId', 'orderNumber', 'date', 'customerName', 'contact', 'address',
+          'paymentMethod', 'items', 'subtotal', 'discountAmount', 'shippingCost',
+          'total', 'statusStep', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'orderNumber', 'date', 'customerName', 'contact', 'address',
+          'paymentMethod', 'items', 'subtotal', 'discountAmount', 'discountLabel',
+          'giftWrapTotal', 'shippingCost', 'total', 'statusStep', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string && data.ownerId == userId && isValidId(data.ownerId)
+        && data.orderNumber is string && data.orderNumber.size() >= 3 && data.orderNumber.size() <= 40
+        && data.date is string && data.date.size() <= 40
+        && data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 120
+        && data.contact is string && data.contact.size() <= 180
+        && data.address is string && data.address.size() <= 300
+        && data.paymentMethod in ['card', 'cod']
+        && data.items is list && data.items.size() >= 1 && data.items.size() <= 50 && data.items[0] is map
+        && data.subtotal is number && data.subtotal >= 0 && data.subtotal <= 50000
+        && data.discountAmount is number && data.discountAmount >= 0 && data.discountAmount <= 50000
+        && (!('discountLabel' in data) || (data.discountLabel is string && data.discountLabel.size() <= 120))
+        && (!('giftWrapTotal' in data) || (data.giftWrapTotal is number && data.giftWrapTotal >= 0 && data.giftWrapTotal <= 10000))
+        && data.shippingCost is number && data.shippingCost >= 0 && data.shippingCost <= 500
+        && data.total is number && data.total >= 0 && data.total <= 50000
+        && data.statusStep in [1, 2, 3, 4]
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidStudioCreation(data, userId) {
+      return data.keys().hasAll(['ownerId', 'kind', 'title', 'prompt', 'aspectRatio', 'createdAt'])
+        && data.keys().hasOnly(['ownerId', 'kind', 'title', 'prompt', 'aspectRatio', 'previewDataUrl', 'createdAt'])
+        && data.ownerId is string && data.ownerId == userId && isValidId(data.ownerId)
+        && data.kind in ['image', 'edit', 'reel']
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 140
+        && data.prompt is string && data.prompt.size() >= 1 && data.prompt.size() <= 1200
+        && data.aspectRatio in ['1:1', '16:9', '9:16', '3:4', '4:3']
+        && (!('previewDataUrl' in data) || (data.previewDataUrl is string && data.previewDataUrl.size() <= 450000))
+        && data.createdAt is timestamp;
+    }
+
+    function isValidChatMessage(data, userId) {
+      return data.keys().hasAll(['ownerId', 'role', 'text', 'model', 'groundingMode', 'createdAt'])
+        && data.keys().hasOnly(['ownerId', 'role', 'text', 'model', 'groundingMode', 'createdAt'])
+        && data.ownerId is string && data.ownerId == userId && isValidId(data.ownerId)
+        && data.role in ['user', 'assistant']
+        && data.text is string && data.text.size() >= 1 && data.text.size() <= 8000
+        && data.model is string && data.model.size() >= 1 && data.model.size() <= 80
+        && data.groundingMode in ['none', 'search', 'maps']
+        && data.createdAt is timestamp;
+    }
+
+    function isValidCampusChallenge(data) {
+      return data.keys().hasAll([
+          'visibility', 'title', 'campus', 'durationLabel', 'targetMl',
+          'creatorId', 'creatorName', 'memberUids', 'dormRoster', 'totalMl',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'visibility', 'title', 'campus', 'description', 'durationLabel',
+          'targetMl', 'inviteCode', 'creatorId', 'creatorName', 'memberUids',
+          'dormRoster', 'totalMl', 'createdAt', 'updatedAt'
+        ])
+        && data.visibility in ['public', 'private']
+        && data.title is string && data.title.size() >= 2 && data.title.size() <= 100
+        && data.campus is string && data.campus.size() >= 1 && data.campus.size() <= 100
+        && (!('description' in data) || (data.description is string && data.description.size() <= 280))
+        && data.durationLabel is string && data.durationLabel.size() >= 1 && data.durationLabel.size() <= 40
+        && data.targetMl is number && data.targetMl >= 1000 && data.targetMl <= 250000
+        && (!('inviteCode' in data) || (data.inviteCode is string && data.inviteCode.size() <= 16))
+        && data.creatorId is string && isValidId(data.creatorId)
+        && data.creatorName is string && data.creatorName.size() >= 1 && data.creatorName.size() <= 80
+        && data.memberUids is list && data.memberUids.size() <= 25
+        && (data.memberUids.size() == 0 || data.memberUids[0] is string)
+        && data.dormRoster is list && data.dormRoster.size() <= 25
+        && (data.dormRoster.size() == 0 || data.dormRoster[0] is map)
+        && data.totalMl is number && data.totalMl >= 0 && data.totalMl <= 50000000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidChallengeEntry(data, challengeId, memberId) {
+      return data.keys().hasAll([
+          'challengeId', 'visibility', 'userId', 'displayName',
+          'loggedMl', 'streakDays', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'challengeId', 'visibility', 'userId', 'displayName', 'dormOrCampus',
+          'loggedMl', 'streakDays', 'createdAt', 'updatedAt'
+        ])
+        && data.challengeId is string && data.challengeId == challengeId && isValidId(data.challengeId)
+        && data.visibility in ['public', 'private']
+        && data.userId is string && data.userId == memberId && isValidId(data.userId)
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80
+        && (!('dormOrCampus' in data) || (data.dormOrCampus is string && data.dormOrCampus.size() <= 80))
+        && data.loggedMl is number && data.loggedMl >= 0 && data.loggedMl <= 500000
+        && data.streakDays is number && data.streakDays >= 0 && data.streakDays <= 365
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidChallengeInvite(data, inviteCode) {
+      return data.keys().hasAll(['code', 'challengeId', 'creatorId', 'createdAt'])
+        && data.keys().hasOnly(['code', 'challengeId', 'creatorId', 'createdAt'])
+        && data.code is string && data.code == inviteCode && data.code.size() >= 4 && data.code.size() <= 16
+        && data.code.matches('^[A-Z0-9]+$')
+        && data.challengeId is string && isValidId(data.challengeId)
+        && data.creatorId is string && isValidId(data.creatorId)
+        && data.createdAt is timestamp;
+    }
+
+    // Admins Collection (Server-Managed RBAC)
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && isValidId(adminId) && request.auth.uid == adminId;
+      allow list, create, update, delete: if false;
+    }
+
+    // Campus Hydration Challenges (Public Leaderboards & Private Dorm Groups)
+    match /campusChallenges/{challengeId} {
+      allow get: if isValidId(challengeId) && (
+        resource.data.visibility == 'public' ||
+        (isSignedIn() && (
+          resource.data.creatorId == request.auth.uid ||
+          request.auth.uid in resource.data.memberUids
+        )) ||
+        isAdmin()
+      );
+
+      // Secure Query Enforcer: Zero get() calls inside allow list
+      allow list: if resource.data.visibility == 'public' ||
+        (isSignedIn() && (
+          resource.data.creatorId == request.auth.uid ||
+          request.auth.uid in resource.data.memberUids
+        )) ||
+        isAdmin();
+
+      allow create: if isVerifiedUser()
+        && isValidId(challengeId)
+        && isValidCampusChallenge(incoming())
+        && incoming().creatorId == request.auth.uid
+        && request.auth.uid in incoming().memberUids
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isVerifiedUser()
+        && isValidId(challengeId)
+        && isValidCampusChallenge(incoming())
+        && incoming().creatorId == existing().creatorId
+        && incoming().visibility == existing().visibility
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          // Action 1: Creator updates group title, description, or goal target
+          (
+            existing().creatorId == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'title', 'campus', 'description', 'durationLabel', 'targetMl', 'updatedAt'
+            ])
+          ) ||
+          // Action 2: Dorm member updates progress or joins via verified invite
+          (
+            (
+              request.auth.uid in existing().memberUids ||
+              (
+                existing().visibility == 'private' &&
+                ('inviteCode' in existing()) &&
+                existing().inviteCode.size() >= 4 &&
+                request.auth.uid in incoming().memberUids &&
+                incoming().memberUids.size() == existing().memberUids.size() + 1 &&
+                exists(/databases/$(database)/documents/challengeInvites/$(existing().inviteCode))
+              )
+            ) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'memberUids', 'dormRoster', 'totalMl', 'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if isValidId(challengeId) && (
+        (isVerifiedUser() && existing().creatorId == request.auth.uid) ||
+        isAdmin()
+      );
+
+      // Public Leaderboard Participant Entries Subcollection
+      match /entries/{memberId} {
+        allow get: if isValidId(challengeId) && isValidId(memberId) && (
+          resource.data.visibility == 'public' ||
+          (isSignedIn() && resource.data.userId == request.auth.uid) ||
+          isAdmin()
+        );
+
+        allow list: if resource.data.visibility == 'public' ||
+          (isSignedIn() && resource.data.userId == request.auth.uid) ||
+          isAdmin();
+
+        allow create: if isVerifiedOwner(memberId)
+          && isValidId(challengeId)
+          && isValidId(memberId)
+          && isValidChallengeEntry(incoming(), challengeId, memberId)
+          && incoming().visibility == 'public'
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && hasParentChallenge(challengeId);
+
+        allow update: if isVerifiedUser()
+          && isValidId(challengeId)
+          && isValidId(memberId)
+          && isValidChallengeEntry(incoming(), challengeId, memberId)
+          && incoming().challengeId == existing().challengeId
+          && incoming().userId == existing().userId
+          && incoming().visibility == existing().visibility
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            isAdmin() ||
+            (
+              isVerifiedOwner(memberId) &&
+              incoming().diff(existing()).affectedKeys().hasOnly([
+                'displayName', 'dormOrCampus', 'loggedMl', 'streakDays', 'updatedAt'
+              ]) &&
+              hasParentChallenge(challengeId)
+            )
+          );
+
+        allow delete: if isValidId(challengeId) && isValidId(memberId) && (
+          isVerifiedOwner(memberId) || isAdmin()
+        );
+      }
+    }
+
+    // Non-Enumerable Invite Code Lookups for Private Dorm Groups
+    match /challengeInvites/{inviteCode} {
+      allow get: if isSignedIn() && isValidId(inviteCode);
+      allow list: if false;
+
+      allow create: if isVerifiedUser()
+        && isValidId(inviteCode)
+        && isValidChallengeInvite(incoming(), inviteCode)
+        && incoming().creatorId == request.auth.uid
+        && incoming().createdAt == request.time
+        && existsAfter(/databases/$(database)/documents/campusChallenges/$(incoming().challengeId));
+
+      allow update: if false;
+
+      allow delete: if isValidId(inviteCode) && (
+        (isVerifiedUser() && existing().creatorId == request.auth.uid) ||
+        isAdmin()
+      );
+    }
+
+    // Private User Profiles & Subcollections
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if false;
+
+      allow create: if isVerifiedOwner(userId)
+        && isValidId(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isVerifiedUser()
+        && isValidId(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            isVerifiedOwner(userId) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'name', 'email', 'phone', 'university', 'preferredColor',
+              'dailyGoalMl', 'savedIds', 'studentDiscountActive',
+              'studentEmail', 'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if isAdmin() && isValidId(userId);
+
+      // Daily Hydration Logs Subcollection
+      match /hydrationLogs/{dateKey} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(dateKey) && (isOwner(userId) || isAdmin());
+        allow list: if isSignedIn() && (
+          (isOwner(userId) && resource.data.ownerId == request.auth.uid) ||
+          isAdmin()
+        );
+
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(dateKey)
+          && isValidHydrationLog(incoming(), userId, dateKey)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && hasParentUser(userId);
+
+        allow update: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(dateKey)
+          && isValidHydrationLog(incoming(), userId, dateKey)
+          && incoming().ownerId == existing().ownerId
+          && incoming().dateKey == existing().dateKey
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            isAdmin() ||
+            (
+              isVerifiedOwner(userId)
+              && incoming().diff(existing()).affectedKeys().hasOnly(['consumedMl', 'entries', 'updatedAt'])
+              && hasParentUser(userId)
+            )
+          );
+
+        allow delete: if isValidId(userId) && isValidId(dateKey) && (isVerifiedOwner(userId) || isAdmin());
+      }
+
+      // Orders Subcollection
+      match /orders/{orderId} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(orderId) && (isOwner(userId) || isAdmin());
+        allow list: if isSignedIn() && (
+          (isOwner(userId) && resource.data.ownerId == request.auth.uid) ||
+          isAdmin()
+        );
+
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(orderId)
+          && isValidOrder(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && hasParentUser(userId);
+
+        allow update: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(orderId)
+          && isValidOrder(incoming(), userId)
+          && incoming().ownerId == existing().ownerId
+          && incoming().orderNumber == existing().orderNumber
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            isAdmin() ||
+            (
+              isVerifiedOwner(userId)
+              && existing().statusStep != 4
+              && incoming().diff(existing()).affectedKeys().hasOnly(['address', 'updatedAt'])
+              && hasParentUser(userId)
+            )
+          );
+
+        allow delete: if isAdmin() && isValidId(userId) && isValidId(orderId);
+      }
+
+      // AI Studio Creations Subcollection
+      match /creations/{creationId} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(creationId) && (isOwner(userId) || isAdmin());
+        allow list: if isSignedIn() && (
+          (isOwner(userId) && resource.data.ownerId == request.auth.uid) ||
+          isAdmin()
+        );
+
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(creationId)
+          && isValidStudioCreation(incoming(), userId)
+          && incoming().createdAt == request.time
+          && hasParentUser(userId);
+
+        allow update: if false;
+
+        allow delete: if isValidId(userId) && isValidId(creationId) && (isVerifiedOwner(userId) || isAdmin());
+      }
+
+      // AI Concierge Chat Messages Subcollection
+      match /chatMessages/{messageId} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(messageId) && (isOwner(userId) || isAdmin());
+        allow list: if isSignedIn() && (
+          (isOwner(userId) && resource.data.ownerId == request.auth.uid) ||
+          isAdmin()
+        );
+
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(messageId)
+          && isValidChatMessage(incoming(), userId)
+          && incoming().createdAt == request.time
+          && hasParentUser(userId);
+
+        allow update: if false;
+
+        allow delete: if isValidId(userId) && isValidId(messageId) && (isVerifiedOwner(userId) || isAdmin());
+      }
+    }
+  }
+}

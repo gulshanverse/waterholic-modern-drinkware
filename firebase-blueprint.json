@@ -1,0 +1,524 @@
+{
+  "entities": {
+    "UserProfileDoc": {
+      "title": "User Profile",
+      "description": "Private member profile, preferences, daily hydration goal, and saved wishlist for a Waterholic user.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the profile owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the member.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Member email address.",
+          "maxLength": 180
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact phone number.",
+          "maxLength": 40
+        },
+        "university": {
+          "type": "string",
+          "description": "Optional campus or university name.",
+          "maxLength": 120
+        },
+        "preferredColor": {
+          "type": "string",
+          "description": "Preferred Waterholic finish colour.",
+          "maxLength": 60
+        },
+        "dailyGoalMl": {
+          "type": "number",
+          "description": "Daily hydration target in milliliters (500 to 8000)."
+        },
+        "memberSince": {
+          "type": "string",
+          "description": "Formatted member join month and year.",
+          "maxLength": 40
+        },
+        "savedIds": {
+          "type": "array",
+          "description": "Bounded list of saved product IDs (max 120)."
+        },
+        "studentDiscountActive": {
+          "type": "boolean",
+          "description": "Whether .edu student discount is unlocked."
+        },
+        "studentEmail": {
+          "type": "string",
+          "description": "Verified student email address if active.",
+          "maxLength": 180
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of profile creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of latest update."
+        }
+      },
+      "required": [
+        "ownerId",
+        "name",
+        "email",
+        "dailyGoalMl",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "HydrationLogDoc": {
+      "title": "Daily Hydration Log",
+      "description": "Tracks daily water intake totals and timestamped refill entries.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "dateKey": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 20,
+          "pattern": "^[0-9\\-]+$"
+        },
+        "consumedMl": {
+          "type": "number",
+          "description": "Total milliliters logged for the day."
+        },
+        "entries": {
+          "type": "array",
+          "description": "Bounded array of intake entries (max 60)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "dateKey",
+        "consumedMl",
+        "entries",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "OrderDoc": {
+      "title": "Waterholic Order",
+      "description": "Completed storefront order record belonging to a user.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "orderNumber": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 40
+        },
+        "date": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "customerName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "contact": {
+          "type": "string",
+          "maxLength": 180
+        },
+        "address": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "paymentMethod": {
+          "type": "string",
+          "enum": ["card", "cod"]
+        },
+        "items": {
+          "type": "array",
+          "description": "Bounded array of ordered line items (max 50), each optionally including gift wrapping style and personalized gift message (<= 180 chars)."
+        },
+        "subtotal": {
+          "type": "number"
+        },
+        "discountAmount": {
+          "type": "number"
+        },
+        "discountLabel": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "giftWrapTotal": {
+          "type": "number",
+          "description": "Total fee for optional per-item gift wrapping (0 to 10000)."
+        },
+        "shippingCost": {
+          "type": "number"
+        },
+        "total": {
+          "type": "number"
+        },
+        "statusStep": {
+          "type": "number",
+          "enum": [1, 2, 3, 4]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "orderNumber",
+        "date",
+        "customerName",
+        "contact",
+        "address",
+        "paymentMethod",
+        "items",
+        "subtotal",
+        "discountAmount",
+        "shippingCost",
+        "total",
+        "statusStep",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "StudioCreationDoc": {
+      "title": "AI Creative Lab Creation",
+      "description": "Saved custom Waterholic bottle design or storyboard created in the AI Studio.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["image", "edit", "reel"]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 140
+        },
+        "prompt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1200
+        },
+        "aspectRatio": {
+          "type": "string",
+          "enum": ["1:1", "16:9", "9:16", "3:4", "4:3"]
+        },
+        "previewDataUrl": {
+          "type": "string",
+          "description": "Compressed preview data URL (capped at 450KB)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "kind",
+        "title",
+        "prompt",
+        "aspectRatio",
+        "createdAt"
+      ]
+    },
+    "ChatMessageDoc": {
+      "title": "AI Concierge Chat Message",
+      "description": "Persisted multi-turn chat message between the member and Waterholic Hydration Concierge.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["user", "assistant"]
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8000
+        },
+        "model": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "groundingMode": {
+          "type": "string",
+          "enum": ["none", "search", "maps"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "role",
+        "text",
+        "model",
+        "groundingMode",
+        "createdAt"
+      ]
+    },
+    "CampusChallengeDoc": {
+      "title": "Campus Hydration Challenge or Private Dorm Group",
+      "description": "Public campus hydration leaderboard or private dorm roommate hydration goal.",
+      "type": "object",
+      "properties": {
+        "visibility": {
+          "type": "string",
+          "enum": ["public", "private"]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "campus": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 280
+        },
+        "durationLabel": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "targetMl": {
+          "type": "number",
+          "description": "Group or individual daily hydration target in milliliters."
+        },
+        "inviteCode": {
+          "type": "string",
+          "maxLength": 16
+        },
+        "creatorId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "creatorName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "memberUids": {
+          "type": "array",
+          "description": "Bounded list of member UIDs for private dorm groups (max 25)."
+        },
+        "dormRoster": {
+          "type": "array",
+          "description": "Bounded list of dorm member score objects (max 25)."
+        },
+        "totalMl": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "visibility",
+        "title",
+        "campus",
+        "durationLabel",
+        "targetMl",
+        "creatorId",
+        "creatorName",
+        "memberUids",
+        "dormRoster",
+        "totalMl",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ChallengeEntryDoc": {
+      "title": "Public Leaderboard Participant Entry",
+      "description": "Individual student progress entry inside a public campus hydration challenge.",
+      "type": "object",
+      "properties": {
+        "challengeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["public", "private"]
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "dormOrCampus": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "loggedMl": {
+          "type": "number"
+        },
+        "streakDays": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "challengeId",
+        "visibility",
+        "userId",
+        "displayName",
+        "loggedMl",
+        "streakDays",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ChallengeInviteDoc": {
+      "title": "Private Dorm Group Invite Code Lookup",
+      "description": "Non-enumerable lookup mapping an invite code to a private dorm group ID.",
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 16,
+          "pattern": "^[A-Z0-9]+$"
+        },
+        "challengeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "creatorId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["code", "challengeId", "creatorId", "createdAt"]
+    },
+    "AdminDoc": {
+      "title": "Admin Role Document",
+      "description": "Server-managed admin membership lookup document.",
+      "type": "object",
+      "properties": {
+        "grantedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfileDoc" },
+      "description": "Private user profile and wishlist document keyed by Firebase Auth UID."
+    },
+    "/users/{userId}/hydrationLogs/{dateKey}": {
+      "schema": { "$ref": "#/entities/HydrationLogDoc" },
+      "description": "Daily hydration intake logs keyed by YYYY-MM-DD."
+    },
+    "/users/{userId}/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/OrderDoc" },
+      "description": "User order history subcollection."
+    },
+    "/users/{userId}/creations/{creationId}": {
+      "schema": { "$ref": "#/entities/StudioCreationDoc" },
+      "description": "User-saved AI bottle designs and motion storyboards."
+    },
+    "/users/{userId}/chatMessages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessageDoc" },
+      "description": "Multi-turn AI Hydration Concierge conversation history."
+    },
+    "/campusChallenges/{challengeId}": {
+      "schema": { "$ref": "#/entities/CampusChallengeDoc" },
+      "description": "Public campus hydration leaderboards and private dorm group goals."
+    },
+    "/campusChallenges/{challengeId}/entries/{memberId}": {
+      "schema": { "$ref": "#/entities/ChallengeEntryDoc" },
+      "description": "Participant scores on public campus hydration leaderboards."
+    },
+    "/challengeInvites/{inviteCode}": {
+      "schema": { "$ref": "#/entities/ChallengeInviteDoc" },
+      "description": "Direct-get invite lookup for joining private dorm groups by code."
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminDoc" },
+      "description": "Trusted server-managed admin allowlist."
+    }
+  }
+}
