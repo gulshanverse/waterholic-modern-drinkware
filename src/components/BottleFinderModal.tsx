@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { PRODUCTS, type Product } from '../data/products';
 import { BottleColorImage } from './BottleColorImage';
+import { triggerAddToBagHaptic } from '../utils/hapticFeedback';
 import type { AddToBagPayload } from './CatalogSection';
 
 type RhythmChoice = 'desk' | 'campus' | 'trail' | 'home';
@@ -556,7 +557,8 @@ export function BottleFinderModal({
                               className={`btn btn-sm ${
                                 isAdded ? 'btn-added-state' : 'btn-primary'
                               }`}
-                              onClick={() => {
+                              onClick={(e) => {
+                                triggerAddToBagHaptic(e.currentTarget);
                                 onAddToBag({
                                   product: rec.product,
                                   finish: rec.recommendedFinish,

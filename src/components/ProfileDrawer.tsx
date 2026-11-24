@@ -23,6 +23,7 @@ import {
 } from '../utils/hydrationMilestones';
 import { useAuth } from '../contexts/AuthContext';
 import { Cloud, Gift, LogIn, LogOut } from 'lucide-react';
+import { triggerAddToBagHaptic } from '../utils/hapticFeedback';
 
 export type ProfileTab = 'overview' | 'orders' | 'addresses' | 'wishlist';
 
@@ -875,7 +876,8 @@ export function ProfileDrawer({
                           <button
                             type="button"
                             className="btn-card-primary"
-                            onClick={() =>
+                            onClick={(e) => {
+                              triggerAddToBagHaptic(e.currentTarget);
                               onAddToBag({
                                 product,
                                 finish: defaultFinish,
@@ -885,8 +887,8 @@ export function ProfileDrawer({
                                   product.price +
                                   (defaultSize?.priceDelta ?? 0),
                                 qty: 1,
-                              })
-                            }
+                              });
+                            }}
                           >
                             Add to Bag
                           </button>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Check, Copy, Link2 } from 'lucide-react';
 import { CATEGORY_MAP, PRODUCTS, type Product } from '../data/products';
 import type { HydrationLog, UserProfile } from '../types/profile';
 import { getRecoloredBottleUrl } from '../utils/recolorBottle';
@@ -79,6 +80,7 @@ interface ShareHydrationModalProps {
   open: boolean;
   initialMode?: ShareMode;
   initialProductId?: string | null;
+  initialFinishId?: string | null;
   profile: UserProfile;
   hydration: HydrationLog;
   savedProducts: Product[];
@@ -224,6 +226,7 @@ export function ShareHydrationModal({
   open,
   initialMode = 'progress',
   initialProductId = null,
+  initialFinishId = null,
   profile,
   hydration,
   savedProducts,
@@ -242,22 +245,11 @@ export function ShareHydrationModal({
   const [loadedImg, setLoadedImg] = useState<HTMLImageElement | null>(null);
   const [imgLoading, setImgLoading] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const feedbackTimerRef = useRef<number | null>(null);
-
-  // Build product picker choices: user's saved wishlist first, then top featured products
-  const selectableProducts = useMemo(() => {
-    const savedSet = new Set(savedProducts.map((p) => p.id));
-    const featuredExtras = PRODUCTS.filter(
-      (p) => p.featured && !savedSet.has(p.id)
-    ).slice(0, 12);
-    return {
-      saved: savedProducts,
-      featured: featuredExtras,
-      all: [...savedProducts, ...featuredExtras],
-    };
-  }, [savedProducts]);
+  const linkCopiedTimerRef = useRef<number | null>(null);
 
   const selectedProduct: Product = useMemo(() => {
     return (
@@ -267,21 +259,79 @@ export function ShareHydrationModal({
     );
   }, [selectedProductId, savedProducts]);
 
+  // Build product picker choices: currently viewed product (if outside saved/featured), saved wishlist, then featured
+  const selectableProducts = useMemo(() => {
+    const savedSet = new Set(savedProducts.map((p) => p.id));
+    const featuredExtras = PRODUCTS.filter(
+      (p) => p.featured && !savedSet.has(p.id)
+    ).slice(0, 12);
+    const listedIds = new Set([
+      ...savedProducts.map((p) => p.id),
+      ...featuredExtras.map((p) => p.id),
+    ]);
+    const currentExtra = listedIds.has(selectedProduct.id)
+      ? null
+      : selectedProduct;
+    return {
+      currentExtra,
+      saved: savedProducts,
+      featured: featuredExtras,
+      all: [
+        ...(currentExtra ? [currentExtra] : []),
+        ...savedProducts,
+        ...featuredExtras,
+      ],
+    };
+  }, [savedProducts, selectedProduct]);
+
   const activeFinish =
     selectedProduct.finishes[selectedFinishIdx] ?? selectedProduct.finishes[0];
+
+  const directProductUrl = useMemo(() => {
+    if (typeof window === 'undefined') {
+      const finishParam = activeFinish?.id
+        ? `&finish=${encodeURIComponent(activeFinish.id)}`
+        : '';
+      return `https://waterholic.app/?product=${encodeURIComponent(selectedProduct.id)}${finishParam}`;
+    }
+    const url = new URL(window.location.href);
+    url.search = '';
+    url.hash = '';
+    url.searchParams.set('product', selectedProduct.id);
+    if (activeFinish?.id) {
+      url.searchParams.set('finish', activeFinish.id);
+    }
+    return url.toString();
+  }, [selectedProduct.id, activeFinish?.id]);
+
+  const shortProductLinkLabel = useMemo(() => {
+    const finishQuery = activeFinish?.id ? `&finish=${activeFinish.id}` : '';
+    try {
+      const parsed = new URL(directProductUrl);
+      const host = parsed.host.length > 26 ? 'waterholic.app' : parsed.host;
+      return `${host}/?product=${selectedProduct.id}${finishQuery}`;
+    } catch {
+      return `waterholic.app/?product=${selectedProduct.id}${finishQuery}`;
+    }
+  }, [directProductUrl, selectedProduct.id, activeFinish?.id]);
 
   useEffect(() => {
     if (!open) return;
     setMode(initialMode);
-    if (initialProductId) {
-      setSelectedProductId(initialProductId);
-      setSelectedFinishIdx(0);
-    } else if (savedProducts[0]) {
-      setSelectedProductId(savedProducts[0].id);
+    setLinkCopied(false);
+    const targetProdId = initialProductId ?? savedProducts[0]?.id ?? PRODUCTS[0].id;
+    setSelectedProductId(targetProdId);
+    const targetProduct = PRODUCTS.find((p) => p.id === targetProdId);
+    if (targetProduct && initialFinishId) {
+      const idx = targetProduct.finishes.findIndex(
+        (f) => f.id === initialFinishId
+      );
+      setSelectedFinishIdx(idx >= 0 ? idx : 0);
+    } else {
       setSelectedFinishIdx(0);
     }
     setFeedback(null);
-  }, [open, initialMode, initialProductId, savedProducts]);
+  }, [open, initialMode, initialProductId, initialFinishId, savedProducts]);
 
   useEffect(() => {
     if (!open) return;
@@ -296,6 +346,9 @@ export function ShareHydrationModal({
     return () => {
       if (feedbackTimerRef.current !== null) {
         window.clearTimeout(feedbackTimerRef.current);
+      }
+      if (linkCopiedTimerRef.current !== null) {
+        window.clearTimeout(linkCopiedTimerRef.current);
       }
     };
   }, []);
@@ -771,13 +824,20 @@ export function ShareHydrationModal({
       }
     }
 
-    // 6. Quiet Bottom Brand Sign-Off
+    // 6. Quiet Bottom Brand Sign-Off (with direct product link in Product mode)
     const footerY = height - 66;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = pal.textSecondary;
-    ctx.font = '500 22px "DM Sans", -apple-system, sans-serif';
-    ctx.fillText('Pure hydration, carried daily.', pad, footerY);
+    ctx.font =
+      mode === 'product'
+        ? '500 20px "DM Mono", monospace'
+        : '500 22px "DM Sans", -apple-system, sans-serif';
+    ctx.fillText(
+      mode === 'product' ? shortProductLinkLabel : 'Pure hydration, carried daily.',
+      pad,
+      footerY
+    );
 
     ctx.textAlign = 'right';
     ctx.fillStyle = pal.accent;
@@ -797,6 +857,7 @@ export function ShareHydrationModal({
     activeFinish,
     loadedImg,
     caption,
+    shortProductLinkLabel,
   ]);
 
   useEffect(() => {
@@ -877,38 +938,83 @@ export function ShareHydrationModal({
     showFeedback('Clipboard blocked by browser — use Download PNG');
   };
 
+  const handleCopyProductLink = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(directProductUrl);
+      } else {
+        const temp = document.createElement('textarea');
+        temp.value = directProductUrl;
+        temp.style.position = 'fixed';
+        temp.style.opacity = '0';
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+      }
+      setLinkCopied(true);
+      if (linkCopiedTimerRef.current !== null) {
+        window.clearTimeout(linkCopiedTimerRef.current);
+      }
+      linkCopiedTimerRef.current = window.setTimeout(() => {
+        setLinkCopied(false);
+        linkCopiedTimerRef.current = null;
+      }, 2400);
+      showFeedback('Direct product link copied to clipboard');
+    } catch {
+      showFeedback('Could not copy automatically — select the product link above');
+    }
+  };
+
   const handleNativeShare = async () => {
     const blob = await getCanvasBlob();
-    if (!blob) {
-      await handleDownload();
-      return;
-    }
     const fileName =
       mode === 'progress'
         ? `waterholic-hydration-${hydrationPct}pct.png`
         : `waterholic-${selectedProduct.sku.toLowerCase()}.png`;
+    const shareTitle =
+      mode === 'progress'
+        ? 'Waterholic Hydration Card'
+        : `${selectedProduct.name} — Waterholic`;
     const shareText =
       mode === 'progress'
         ? `I'm at ${hydrationPct}% (${hydration.consumedMl} ml / ${profile.dailyGoalMl} ml) of my daily hydration goal with Waterholic!`
-        : `My favorite Waterholic pick: ${selectedProduct.name} (${activeFinish?.name ?? 'Signature'}).`;
+        : `Check out the ${selectedProduct.name} (${activeFinish?.name ?? 'Signature'}) on Waterholic: ${directProductUrl}`;
 
     try {
-      const file = new File([blob], fileName, { type: 'image/png' });
-      if (
-        navigator.share &&
-        navigator.canShare &&
-        navigator.canShare({ files: [file] })
-      ) {
+      if (blob && navigator.share && navigator.canShare) {
+        const file = new File([blob], fileName, { type: 'image/png' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: shareTitle,
+            text: shareText,
+            ...(mode === 'product' ? { url: directProductUrl } : {}),
+            files: [file],
+          });
+          showFeedback('Shared bottle preview & product link');
+          return;
+        }
+      }
+      if (navigator.share) {
         await navigator.share({
-          title: 'Waterholic Hydration Card',
+          title: shareTitle,
           text: shareText,
-          files: [file],
+          ...(mode === 'product' ? { url: directProductUrl } : {}),
         });
-        showFeedback('Shared successfully');
+        showFeedback('Shared direct product link');
         return;
       }
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') return;
+    }
+
+    if (mode === 'product') {
+      await handleCopyProductLink();
+      if (blob) {
+        await handleDownload();
+        showFeedback('Direct product link copied & bottle preview PNG downloaded');
+      }
+      return;
     }
 
     await handleDownload();
@@ -932,7 +1038,7 @@ export function ShareHydrationModal({
           <div>
             <span className="footer-doc-kicker">Canvas Card Studio</span>
             <h2 id="share-hydration-title" className="share-modal-title">
-              Share your Hydration
+              {mode === 'product' ? 'Share Product & Preview' : 'Share your Hydration'}
             </h2>
           </div>
           <button
@@ -1014,6 +1120,14 @@ export function ShareHydrationModal({
                       setSelectedFinishIdx(0);
                     }}
                   >
+                    {selectableProducts.currentExtra && (
+                      <optgroup label="Currently Viewing">
+                        <option value={selectableProducts.currentExtra.id}>
+                          {selectableProducts.currentExtra.name} ($
+                          {selectableProducts.currentExtra.price})
+                        </option>
+                      </optgroup>
+                    )}
                     {selectableProducts.saved.length > 0 && (
                       <optgroup label="Your Saved Wishlist">
                         {selectableProducts.saved.map((p) => (
@@ -1059,6 +1173,43 @@ export function ShareHydrationModal({
                         />
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                <div className="share-control-group">
+                  <label htmlFor="share-direct-link-input" className="share-control-label">
+                    Direct Product Link
+                  </label>
+                  <div className="share-direct-link-row">
+                    <span className="share-link-icon" aria-hidden="true">
+                      <Link2 size={14} />
+                    </span>
+                    <input
+                      id="share-direct-link-input"
+                      type="text"
+                      readOnly
+                      className="share-direct-link-input tabular-nums"
+                      value={directProductUrl}
+                      onFocus={(e) => e.currentTarget.select()}
+                      aria-label="Direct link to this product"
+                    />
+                    <button
+                      type="button"
+                      className={`share-copy-link-btn${linkCopied ? ' is-copied' : ''}`}
+                      onClick={handleCopyProductLink}
+                    >
+                      {linkCopied ? (
+                        <>
+                          <Check size={13} aria-hidden="true" />
+                          <span>Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={13} aria-hidden="true" />
+                          <span>Copy Link</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               </>
@@ -1135,24 +1286,24 @@ export function ShareHydrationModal({
               <button
                 type="button"
                 className="btn btn-primary share-primary-cta"
-                onClick={handleDownload}
+                onClick={mode === 'product' ? handleNativeShare : handleDownload}
               >
-                Download PNG
+                {mode === 'product' ? 'Share Preview & Link' : 'Download PNG'}
               </button>
               <div className="share-secondary-row">
+                <button
+                  type="button"
+                  className="btn-card-secondary share-sec-btn"
+                  onClick={handleDownload}
+                >
+                  Download PNG
+                </button>
                 <button
                   type="button"
                   className="btn-card-secondary share-sec-btn"
                   onClick={handleCopyImage}
                 >
                   Copy Image
-                </button>
-                <button
-                  type="button"
-                  className="btn-card-secondary share-sec-btn"
-                  onClick={handleNativeShare}
-                >
-                  Share Card
                 </button>
               </div>
             </div>

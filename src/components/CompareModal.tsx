@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { CATEGORY_MAP, type Product } from '../data/products';
 import type { AddToBagPayload } from './CatalogSection';
+import { triggerAddToBagHaptic } from '../utils/hapticFeedback';
 
 interface CompareModalProps {
   open: boolean;
@@ -163,15 +164,16 @@ export function CompareModal({
                       <button
                         type="button"
                         className="btn-card-primary"
-                        onClick={() =>
+                        onClick={(e) => {
+                          triggerAddToBagHaptic(e.currentTarget);
                           onAddToBag({
                             product: p,
                             finish: p.finishes[0],
                             sizeLabel: defaultSize?.label ?? p.capacity,
                             unitPrice: p.price + (defaultSize?.priceDelta ?? 0),
                             qty: 1,
-                          })
-                        }
+                          });
+                        }}
                       >
                         Add to Bag
                       </button>

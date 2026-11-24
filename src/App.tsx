@@ -21,6 +21,7 @@ import {
 } from './components/BagDrawer';
 import { CampusSection } from './components/CampusSection';
 import { ProfileDrawer, type ProfileTab } from './components/ProfileDrawer';
+import { ShareHydrationModal } from './components/ShareHydrationModal';
 import { CompareModal } from './components/CompareModal';
 import { SupportSection } from './components/SupportSection';
 import { BottleBrandMark } from './components/BottleBrandMark';
@@ -66,6 +67,7 @@ import {
   X,
 } from 'lucide-react';
 import { AtmosphericSoundscapeEngine } from './utils/atmosphericSoundscape';
+import { triggerAddToBagHaptic } from './utils/hapticFeedback';
 import bottleStudioLogoImg from './assets/images/waterholic_studio_logo_bottle_1795462018573.jpg';
 import bottleRiverLogoImg from './assets/images/waterholic_river_logo_bottle_1795462051322.jpg';
 import bottleOutdoorLogoImg from './assets/images/waterholic_outdoor_logo_bottle_1795462017951.jpg';
@@ -304,6 +306,10 @@ export default function App() {
     product: Product;
     finishId?: string;
   } | null>(null);
+  const [shareProductTarget, setShareProductTarget] = useState<{
+    productId: string;
+    finishId?: string;
+  } | null>(null);
   const [bag, setBag] = useState<BagLineItem[]>(() =>
     readStored<BagLineItem[]>('wh_bag_v1', [])
   );
@@ -395,6 +401,8 @@ export default function App() {
   const [fastFlowSignal, setFastFlowSignal] = useState<number>(0);
   const [fastFlowSurging, setFastFlowSurging] = useState<boolean>(false);
   const fastFlowTimerRef = useRef<number | null>(null);
+  const [flagshipJustAdded, setFlagshipJustAdded] = useState<boolean>(false);
+  const flagshipAddedTimerRef = useRef<number | null>(null);
 
   const {
     user,
@@ -1308,7 +1316,9 @@ export default function App() {
     window.setTimeout(() => setPromoCopied(false), 2400);
   }, [showToast]);
 
-  const addFlagshipToBag = () => {
+  const addFlagshipToBag = (e?: React.MouseEvent<HTMLButtonElement>) => {
+    triggerAddToBagHaptic(e?.currentTarget ?? document.getElementById('add-to-bag-btn'));
+    triggerFastFlowPulse();
     const activeCfg = selectedConfigRef.current;
     const finishMeta = FINISH_META[activeCfg.finish];
     const isPinkPremium = activeCfg.finish === 'pink';
@@ -1358,10 +1368,21 @@ export default function App() {
         },
       ];
     });
+    setFlagshipJustAdded(true);
+    if (flagshipAddedTimerRef.current !== null) {
+      window.clearTimeout(flagshipAddedTimerRef.current);
+    }
+    flagshipAddedTimerRef.current = window.setTimeout(() => {
+      setFlagshipJustAdded(false);
+      flagshipAddedTimerRef.current = null;
+    }, 1100);
     if (cleanedMonogram) {
       showToast(`Added custom laser-engraved "${cleanedMonogram}" flask to bag`);
     }
-    setDrawerOpen(true);
+    // Brief beat so user sees the GSAP haptic scale-down & pulse before drawer glides open
+    window.setTimeout(() => {
+      setDrawerOpen(true);
+    }, 260);
   };
 
   const handleAddBundleToBag = useCallback(
@@ -1443,9 +1464,54 @@ export default function App() {
       setRecentlyViewedIds((prev) =>
         [product.id, ...prev.filter((id) => id !== product.id)].slice(0, 6)
       );
+      if (typeof window !== 'undefined') {
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.set('product', product.id);
+          if (finishId) {
+            url.searchParams.set('finish', finishId);
+          } else {
+            url.searchParams.delete('finish');
+          }
+          window.history.replaceState({}, '', url.toString());
+        } catch {
+          // Ignore restricted history API environments
+        }
+      }
     },
     []
   );
+
+  const handleCloseQuickView = useCallback(() => {
+    setActiveModal(null);
+    if (typeof window !== 'undefined') {
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('product') || url.searchParams.has('finish')) {
+          url.searchParams.delete('product');
+          url.searchParams.delete('finish');
+          window.history.replaceState({}, '', url.toString());
+        }
+      } catch {
+        // Ignore restricted history API environments
+      }
+    }
+  }, []);
+
+  // Automatically open direct product deep links (?product=<id>&finish=<finishId>)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const sharedProductId = params.get('product');
+    if (!sharedProductId) return;
+    const matched = PRODUCTS.find((p) => p.id === sharedProductId);
+    if (!matched) return;
+    const sharedFinish = params.get('finish') ?? undefined;
+    setActiveModal({ product: matched, finishId: sharedFinish });
+    setRecentlyViewedIds((prev) =>
+      [matched.id, ...prev.filter((id) => id !== matched.id)].slice(0, 6)
+    );
+  }, []);
 
   const handleToggleCompare = useCallback(
     (productId: string) => {
@@ -3152,14 +3218,16 @@ export default function App() {
 
               <button
                 type="button"
-                className="btn btn-primary btn-full magnetic-btn"
+                className={`btn btn-primary btn-full magnetic-btn${flagshipJustAdded ? ' is-added' : ''}`}
                 id="add-to-bag-btn"
                 onClick={addFlagshipToBag}
               >
                 <span className="btn-label" id="add-to-bag-label">
-                  {engravingEnabled && engravingText.trim()
-                    ? `Add Engraved Flask — $${price + (FINISH_META[finish].premiumDelta ?? 0)}`
-                    : `Add to Bag — $${price + (FINISH_META[finish].premiumDelta ?? 0)}`}
+                  {flagshipJustAdded
+                    ? 'Added to Bag ✓'
+                    : engravingEnabled && engravingText.trim()
+                      ? `Add Engraved Flask — $${price + (FINISH_META[finish].premiumDelta ?? 0)}`
+                      : `Add to Bag — $${price + (FINISH_META[finish].premiumDelta ?? 0)}`}
                 </span>
               </button>
             </div>
@@ -3225,11 +3293,37 @@ export default function App() {
           activeModal ? customReviews[activeModal.product.id] ?? [] : []
         }
         defaultAuthor={profile.name}
-        onClose={() => setActiveModal(null)}
+        onClose={handleCloseQuickView}
         onToggleSave={toggleSaveProduct}
         onAddToBag={handleAddCatalogProduct}
         onSelectProduct={(nextProduct) => handleOpenQuickView(nextProduct)}
+        onShareProduct={(product, finishId) =>
+          setShareProductTarget({ productId: product.id, finishId })
+        }
         onSubmitReview={handleSubmitReview}
+      />
+
+      {/* Bottle Preview Share Studio launched directly from Product Details */}
+      <ShareHydrationModal
+        open={Boolean(shareProductTarget)}
+        initialMode="product"
+        initialProductId={shareProductTarget?.productId ?? null}
+        initialFinishId={shareProductTarget?.finishId ?? null}
+        profile={profile}
+        hydration={hydration}
+        savedProducts={PRODUCTS.filter((p) => savedIds.has(p.id))}
+        bottlesSaved={Math.max(
+          12,
+          Math.round(milestoneStats.totalMlAllTime / 500) + orders.length * 48
+        )}
+        memberTier={
+          orders.reduce((sum, o) => sum + o.total, 0) >= 250
+            ? 'Glacier Elite'
+            : orders.reduce((sum, o) => sum + o.total, 0) >= 90
+              ? 'Alpine Club'
+              : 'Hydration Member'
+        }
+        onClose={() => setShareProductTarget(null)}
       />
 
       {/* Slide-Over Multi-Product Order Bag, Promo Codes & Express Checkout Drawer */}

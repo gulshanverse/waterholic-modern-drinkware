@@ -1,20 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp, Heart, Star, ThumbsUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Heart, Share2, Star, ThumbsUp } from 'lucide-react';
 import { CATEGORY_MAP, PRODUCTS, type Product } from '../data/products';
 import type { ProductReview } from '../types/profile';
 import type { AddToBagPayload } from './CatalogSection';
 import { BottleColorImage } from './BottleColorImage';
+import { ProductModalSkeleton } from './ShimmerSkeletons';
+import { triggerAddToBagHaptic } from '../utils/hapticFeedback';
 
 interface ProductModalProps {
   product: Product | null;
   initialFinishId?: string;
   isSaved: boolean;
+  isLoading?: boolean;
   customReviews: ProductReview[];
   defaultAuthor: string;
   onClose: () => void;
   onToggleSave: (productId: string) => void;
   onAddToBag: (payload: AddToBagPayload) => void;
   onSelectProduct: (product: Product) => void;
+  onShareProduct?: (product: Product, finishId: string) => void;
   onSubmitReview: (
     productId: string,
     review: Omit<ProductReview, 'id' | 'date'>
@@ -199,18 +203,22 @@ export function ProductModal({
   product,
   initialFinishId,
   isSaved,
+  isLoading = false,
   customReviews,
   defaultAuthor,
   onClose,
   onToggleSave,
   onAddToBag,
   onSelectProduct,
+  onShareProduct,
   onSubmitReview,
 }: ProductModalProps) {
   const [finishIdx, setFinishIdx] = useState(0);
   const [sizeIdx, setSizeIdx] = useState(0);
   const [qty, setQty] = useState(1);
   const [imgError, setImgError] = useState(false);
+  const [detailHydrating, setDetailHydrating] = useState(false);
+  const [modalJustAdded, setModalJustAdded] = useState(false);
 
   // Review composer state — starts empty (0 stars) so clicking 1..5 fills empty -> golden
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -242,6 +250,7 @@ export function ProductModal({
     setSizeIdx(defaultSizeIdx >= 0 ? defaultSizeIdx : 0);
     setQty(1);
     setImgError(false);
+    setModalJustAdded(false);
     setShowReviewForm(false);
     setReviewAuthor(defaultAuthor);
     setReviewRating(0);
@@ -251,12 +260,57 @@ export function ProductModal({
     setRatingFilter('all');
     setVisibleReviewCount(INITIAL_REVIEWS_VISIBLE);
     setExpandedReviewIds(new Set());
+
+    // Pre-warm primary product image while displaying crisp shimmer skeleton
+    setDetailHydrating(true);
+    let cancelled = false;
+    let minDelayDone = false;
+    let imgReady = false;
+
+    const finishLoadingIfReady = () => {
+      if (!cancelled && minDelayDone && imgReady) {
+        setDetailHydrating(false);
+      }
+    };
+
+    const preload = new Image();
+    preload.referrerPolicy = 'no-referrer';
+    preload.onload = () => {
+      imgReady = true;
+      finishLoadingIfReady();
+    };
+    preload.onerror = () => {
+      imgReady = true;
+      finishLoadingIfReady();
+    };
+    preload.src = product.image;
+    if (preload.complete) {
+      imgReady = true;
+    }
+
+    const minTimer = window.setTimeout(() => {
+      minDelayDone = true;
+      finishLoadingIfReady();
+    }, 300);
+
+    // Hard safety cap so slow networks never stall the modal skeleton
+    const maxTimer = window.setTimeout(() => {
+      if (!cancelled) setDetailHydrating(false);
+    }, 900);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(minTimer);
+      window.clearTimeout(maxTimer);
+    };
   }, [product, initialFinishId, defaultAuthor]);
 
   useEffect(() => {
     if (!product) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && !document.querySelector('.share-modal-backdrop')) {
+        onClose();
+      }
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
@@ -302,7 +356,10 @@ export function ProductModal({
     filteredReviews.length - visibleReviews.length
   );
 
-  const handleAdd = () => {
+  const handleAdd = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (modalJustAdded) return;
+    triggerAddToBagHaptic(e.currentTarget);
+    setModalJustAdded(true);
     onAddToBag({
       product,
       finish: activeFinish,
@@ -310,7 +367,9 @@ export function ProductModal({
       unitPrice,
       qty,
     });
-    onClose();
+    window.setTimeout(() => {
+      onClose();
+    }, 320);
   };
 
   const handlePostReview = (e: React.FormEvent) => {
@@ -373,42 +432,58 @@ export function ProductModal({
             <span aria-hidden="true">·</span>
             <span>{product.variety}</span>
           </div>
-          <button
-            type="button"
-            className="icon-btn modal-close-btn"
-            aria-label="Close product details"
-            onClick={onClose}
-          >
-            <svg
-              width="19"
-              height="19"
-              viewBox="0 0 256 256"
-              fill="none"
-              aria-hidden="true"
+          <div className="modal-topbar-actions">
+            {onShareProduct && (
+              <button
+                type="button"
+                className="modal-share-btn"
+                aria-label={`Share ${product.name} with bottle preview and direct link`}
+                onClick={() => onShareProduct(product, activeFinish.id)}
+              >
+                <Share2 size={15} aria-hidden="true" />
+                <span>Share</span>
+              </button>
+            )}
+            <button
+              type="button"
+              className="icon-btn modal-close-btn"
+              aria-label="Close product details"
+              onClick={onClose}
             >
-              <line
-                x1="200"
-                y1="56"
-                x2="56"
-                y2="200"
-                stroke="currentColor"
-                strokeWidth="20"
-                strokeLinecap="round"
-              />
-              <line
-                x1="200"
-                y1="200"
-                x2="56"
-                y2="56"
-                stroke="currentColor"
-                strokeWidth="20"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
+              <svg
+                width="19"
+                height="19"
+                viewBox="0 0 256 256"
+                fill="none"
+                aria-hidden="true"
+              >
+                <line
+                  x1="200"
+                  y1="56"
+                  x2="56"
+                  y2="200"
+                  stroke="currentColor"
+                  strokeWidth="20"
+                  strokeLinecap="round"
+                />
+                <line
+                  x1="200"
+                  y1="200"
+                  x2="56"
+                  y2="56"
+                  stroke="currentColor"
+                  strokeWidth="20"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
 
-        <div className="modal-grid">
+        {isLoading || detailHydrating ? (
+          <ProductModalSkeleton />
+        ) : (
+        <div className="modal-grid modal-grid--hydrated">
           <div className="modal-img-frame">
             {!imgError ? (
               <BottleColorImage
@@ -538,10 +613,10 @@ export function ProductModal({
 
               <button
                 type="button"
-                className="btn btn-primary modal-add-btn"
+                className={`btn btn-primary modal-add-btn${modalJustAdded ? ' is-added' : ''}`}
                 onClick={handleAdd}
               >
-                Add to Bag — ${lineTotal}
+                {modalJustAdded ? 'Added to Bag ✓' : `Add to Bag — $${lineTotal}`}
               </button>
 
               <button
@@ -826,6 +901,7 @@ export function ProductModal({
             )}
           </div>
         </div>
+        )}
       </div>
     </div>
   );

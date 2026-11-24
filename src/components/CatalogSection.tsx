@@ -17,6 +17,8 @@ import {
   type ProductFinish,
 } from '../data/products';
 import { BottleColorImage } from './BottleColorImage';
+import { CatalogGridSkeleton } from './ShimmerSkeletons';
+import { triggerAddToBagHaptic } from '../utils/hapticFeedback';
 
 const CARD_HOVER_SPRING: Transition = {
   type: 'spring',
@@ -122,6 +124,7 @@ interface CatalogSectionProps {
   recentlyViewed: Product[];
   onQuickView: (product: Product, finishId?: string) => void;
   onAddToBag: (payload: AddToBagPayload) => void;
+  isLoading?: boolean;
 }
 
 type PriceRange = 'all' | 'under25' | '25to60' | '60to120' | 'over120';
@@ -195,7 +198,8 @@ function ProductCard({
     });
   };
 
-  const handleQuickAdd = () => {
+  const handleQuickAdd = (e: React.MouseEvent<HTMLButtonElement>) => {
+    triggerAddToBagHaptic(e.currentTarget);
     onAddToBag({
       product,
       finish: activeFinish,
@@ -439,13 +443,10 @@ function ProductCard({
             >
               Details
             </motion.button>
-            <motion.button
+            <button
               type="button"
               className={`btn-card-primary${justAdded ? ' is-added' : ''}`}
               onClick={handleQuickAdd}
-              whileHover={{ y: -1.5, scale: 1.03 }}
-              whileTap={{ scale: 0.93 }}
-              transition={CONTROL_SPRING}
             >
               <AnimatePresence mode="wait" initial={false}>
                 <motion.span
@@ -459,7 +460,7 @@ function ProductCard({
                   {justAdded ? 'Added ✓' : 'Add to Bag'}
                 </motion.span>
               </AnimatePresence>
-            </motion.button>
+            </button>
           </div>
         </div>
       </div>
@@ -482,6 +483,7 @@ export function CatalogSection({
   recentlyViewed,
   onQuickView,
   onAddToBag,
+  isLoading = false,
 }: CatalogSectionProps) {
   const [selectedVariety, setSelectedVariety] = useState<string>('all');
   const [selectedMaterial, setSelectedMaterial] = useState<string>('all');
@@ -489,7 +491,40 @@ export function CatalogSection({
   const [sortBy, setSortBy] = useState<SortKey>('featured');
   const [pageSize, setPageSize] = useState<number>(12);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [initialHydrating, setInitialHydrating] = useState<boolean>(true);
+  const [transitionLoading, setTransitionLoading] = useState<boolean>(false);
+  const didMountFiltersRef = useRef<boolean>(false);
   const gridTopRef = useRef<HTMLDivElement | null>(null);
+
+  // Initial catalog fetch shimmer on first load for smooth perceived performance
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setInitialHydrating(false);
+    }, 520);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  // Crisp micro-shimmer on category, filter, sort, or page transitions (never blocks live search typing)
+  useEffect(() => {
+    if (!didMountFiltersRef.current) {
+      didMountFiltersRef.current = true;
+      return;
+    }
+    setTransitionLoading(true);
+    const timer = window.setTimeout(() => {
+      setTransitionLoading(false);
+    }, 230);
+    return () => window.clearTimeout(timer);
+  }, [
+    selectedCategory,
+    selectedVariety,
+    selectedMaterial,
+    priceRange,
+    sortBy,
+    currentPage,
+    pageSize,
+    showSavedOnly,
+  ]);
 
   // Category counts across all 105 products
   const categoryCounts = useMemo(() => {
@@ -913,8 +948,12 @@ export function CatalogSection({
           </div>
         )}
 
-        {/* Product Grid or Empty State */}
-        {visibleProducts.length === 0 ? (
+        {/* Product Grid, Shimmer Skeleton, or Empty State */}
+        {isLoading || initialHydrating || transitionLoading ? (
+          <CatalogGridSkeleton
+            count={Math.min(pageSize, Math.max(6, visibleProducts.length || 12))}
+          />
+        ) : visibleProducts.length === 0 ? (
           <div className="catalog-empty">
             <h3>No water gear matches those filters</h3>
             <p>
