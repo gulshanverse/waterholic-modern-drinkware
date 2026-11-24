@@ -32,7 +32,7 @@ import {
 import { CreativeStudioSection } from './components/CreativeStudioSection';
 import { AiConciergeDrawer } from './components/AiConciergeDrawer';
 import { useAuth } from './contexts/AuthContext';
-import { Menu, Sparkles, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Menu, Sparkles, X } from 'lucide-react';
 import bottleStudioLogoImg from './assets/images/waterholic_studio_logo_bottle_1795462018573.jpg';
 import bottleRiverLogoImg from './assets/images/waterholic_river_logo_bottle_1795462051322.jpg';
 import bottleOutdoorLogoImg from './assets/images/waterholic_outdoor_logo_bottle_1795462017951.jpg';
@@ -225,6 +225,8 @@ export default function App() {
   const [price, setPrice] = useState<number>(48);
   const [activeStage, setActiveStage] = useState<number>(0);
   const [captionBlur, setCaptionBlur] = useState<boolean>(false);
+  const [hasSwipedShowcase, setHasSwipedShowcase] = useState<boolean>(false);
+  const [isSwipingShowcase, setIsSwipingShowcase] = useState<boolean>(false);
   const [splitPct, setSplitPct] = useState<number>(50);
   const [splitAnimate, setSplitAnimate] = useState<boolean>(false);
 
@@ -315,6 +317,27 @@ export default function App() {
   const catalogHostRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const showcaseRef = useRef<HTMLElement | null>(null);
+  const showcaseFramesWrapRef = useRef<HTMLDivElement | null>(null);
+  const showcaseTriggerRef = useRef<ScrollTrigger | null>(null);
+  const showcaseSwipeRef = useRef<{
+    active: boolean;
+    startX: number;
+    startY: number;
+    lastX: number;
+    startTime: number;
+    startStage: number;
+    lockedAxis: 'x' | 'y' | null;
+    viewportWidth: number;
+  }>({
+    active: false,
+    startX: 0,
+    startY: 0,
+    lastX: 0,
+    startTime: 0,
+    startStage: 0,
+    lockedAxis: null,
+    viewportWidth: 375,
+  });
   const frameRefs = useRef<(HTMLElement | null)[]>([]);
   const bentoGridRef = useRef<HTMLDivElement | null>(null);
   const compWrapRef = useRef<HTMLDivElement | null>(null);
@@ -561,47 +584,68 @@ export default function App() {
         (el): el is HTMLElement => el !== null
       );
       if (showcaseRef.current && frames.length === 4) {
-        const tl = gsap.timeline({
-          scrollTrigger: {
-            trigger: showcaseRef.current,
-            start: 'top top',
-            end: '+=280%',
-            pin: true,
-            scrub: 0.65,
-            onUpdate: (self: { progress: number }) => {
-              const t = self.progress * 3.5;
-              let nextIdx = 0;
-              if (t >= 3.07) nextIdx = 3;
-              else if (t >= 2.02) nextIdx = 2;
-              else if (t >= 0.97) nextIdx = 1;
+        const mm = gsap.matchMedia();
 
-              if (nextIdx !== stageIdxRef.current) {
-                stageIdxRef.current = nextIdx;
-                setCaptionBlur(true);
-                if (stageTimerRef.current !== null) {
-                  window.clearTimeout(stageTimerRef.current);
+        mm.add('(min-width: 769px)', () => {
+          const tl = gsap.timeline({
+            scrollTrigger: {
+              trigger: showcaseRef.current,
+              start: 'top top',
+              end: '+=280%',
+              pin: true,
+              scrub: 0.65,
+              onUpdate: (self: { progress: number }) => {
+                const t = self.progress * 3.5;
+                let nextIdx = 0;
+                if (t >= 3.07) nextIdx = 3;
+                else if (t >= 2.02) nextIdx = 2;
+                else if (t >= 0.97) nextIdx = 1;
+
+                if (nextIdx !== stageIdxRef.current) {
+                  stageIdxRef.current = nextIdx;
+                  setCaptionBlur(true);
+                  if (stageTimerRef.current !== null) {
+                    window.clearTimeout(stageTimerRef.current);
+                  }
+                  stageTimerRef.current = window.setTimeout(() => {
+                    stageTimerRef.current = null;
+                    setActiveStage(nextIdx);
+                    setCaptionBlur(false);
+                  }, 100);
                 }
-                stageTimerRef.current = window.setTimeout(() => {
-                  stageTimerRef.current = null;
-                  setActiveStage(nextIdx);
-                  setCaptionBlur(false);
-                }, 100);
-              }
+              },
             },
-          },
+          });
+
+          const wipeStarts = [0.25, 1.3, 2.35];
+          frames.forEach((frame, i) => {
+            if (i === 0) return;
+            tl.fromTo(
+              frame,
+              { clipPath: 'inset(0 0 0 100%)' },
+              { clipPath: 'inset(0 0 0 0%)', ease: 'none', duration: 0.8 },
+              wipeStarts[i - 1]
+            );
+          });
+          tl.set({}, {}, 3.5);
+
+          showcaseTriggerRef.current = tl.scrollTrigger ?? null;
+          return () => {
+            showcaseTriggerRef.current = null;
+          };
         });
 
-        const wipeStarts = [0.25, 1.3, 2.35];
-        frames.forEach((frame, i) => {
-          if (i === 0) return;
-          tl.fromTo(
-            frame,
-            { clipPath: 'inset(0 0 0 100%)' },
-            { clipPath: 'inset(0 0 0 0%)', ease: 'none', duration: 0.8 },
-            wipeStarts[i - 1]
-          );
+        mm.add('(max-width: 768px)', () => {
+          showcaseTriggerRef.current = null;
+          frames.forEach((frame, i) => {
+            gsap.set(frame, {
+              clipPath:
+                i <= stageIdxRef.current
+                  ? 'inset(0 0 0 0%)'
+                  : 'inset(0 0 0 100%)',
+            });
+          });
         });
-        tl.set({}, {}, 3.5);
       }
 
       if (bentoGridRef.current) {
@@ -695,21 +739,173 @@ export default function App() {
   }, []);
 
   const selectStage = (idx: number) => {
-    stageIdxRef.current = idx;
-    setCaptionBlur(true);
-    if (stageTimerRef.current !== null) {
-      window.clearTimeout(stageTimerRef.current);
+    const clampedIdx = Math.max(0, Math.min(SHOWCASE_STAGES.length - 1, idx));
+    const prefersReduced = window.matchMedia(
+      '(prefers-reduced-motion: reduce)'
+    ).matches;
+
+    const st = showcaseTriggerRef.current;
+    if (st && st.isActive) {
+      const stageProgress = [0, 1.15 / 3.5, 2.2 / 3.5, 3.35 / 3.5][clampedIdx];
+      const targetScroll = st.start + (st.end - st.start) * stageProgress;
+      window.scrollTo({
+        top: targetScroll,
+        behavior: prefersReduced ? 'auto' : 'smooth',
+      });
     }
-    stageTimerRef.current = window.setTimeout(() => {
-      stageTimerRef.current = null;
-      setActiveStage(idx);
-      setCaptionBlur(false);
-    }, 110);
+
+    const stageChanged = clampedIdx !== stageIdxRef.current;
+    stageIdxRef.current = clampedIdx;
+
+    if (stageChanged) {
+      setCaptionBlur(true);
+      if (stageTimerRef.current !== null) {
+        window.clearTimeout(stageTimerRef.current);
+      }
+      stageTimerRef.current = window.setTimeout(() => {
+        stageTimerRef.current = null;
+        setActiveStage(clampedIdx);
+        setCaptionBlur(false);
+      }, 110);
+    } else {
+      setActiveStage(clampedIdx);
+    }
+
     frameRefs.current.forEach((frame, i) => {
       if (!frame) return;
-      frame.style.clipPath =
-        i <= idx ? 'inset(0 0 0 0%)' : 'inset(0 0 0 100%)';
+      const targetClip = i <= clampedIdx ? 'inset(0 0 0 0%)' : 'inset(0 0 0 100%)';
+      if (prefersReduced) {
+        gsap.set(frame, { clipPath: targetClip });
+      } else {
+        gsap.to(frame, {
+          clipPath: targetClip,
+          duration: 0.42,
+          ease: 'power3.out',
+          overwrite: 'auto',
+        });
+      }
     });
+  };
+
+  const handleShowcaseTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1) return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest('button')) return;
+
+    const touch = e.touches[0];
+    const rect = e.currentTarget.getBoundingClientRect();
+    showcaseSwipeRef.current = {
+      active: true,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      lastX: touch.clientX,
+      startTime: performance.now(),
+      startStage: stageIdxRef.current,
+      lockedAxis: null,
+      viewportWidth: Math.max(1, rect.width),
+    };
+  };
+
+  const handleShowcaseTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const swipe = showcaseSwipeRef.current;
+    if (!swipe.active || e.touches.length !== 1) return;
+
+    const touch = e.touches[0];
+    const dx = touch.clientX - swipe.startX;
+    const dy = touch.clientY - swipe.startY;
+    swipe.lastX = touch.clientX;
+
+    if (swipe.lockedAxis === null) {
+      if (Math.hypot(dx, dy) < 8) return;
+      if (Math.abs(dx) > Math.abs(dy) * 1.15) {
+        swipe.lockedAxis = 'x';
+        setIsSwipingShowcase(true);
+      } else {
+        swipe.lockedAxis = 'y';
+        swipe.active = false;
+        return;
+      }
+    }
+
+    if (swipe.lockedAxis !== 'x') return;
+
+    const progress = Math.min(1, Math.abs(dx) / swipe.viewportWidth);
+    const { startStage } = swipe;
+
+    if (dx < 0) {
+      if (startStage < SHOWCASE_STAGES.length - 1) {
+        const nextFrame = frameRefs.current[startStage + 1];
+        if (nextFrame) {
+          gsap.killTweensOf(nextFrame);
+          nextFrame.style.clipPath = `inset(0 0 0 ${((1 - progress) * 100).toFixed(2)}%)`;
+        }
+      } else if (showcaseFramesWrapRef.current) {
+        gsap.killTweensOf(showcaseFramesWrapRef.current);
+        showcaseFramesWrapRef.current.style.transform = `translate3d(${(dx * 0.14).toFixed(1)}px, 0, 0)`;
+      }
+    } else if (dx > 0) {
+      if (startStage > 0) {
+        const currentFrame = frameRefs.current[startStage];
+        if (currentFrame) {
+          gsap.killTweensOf(currentFrame);
+          currentFrame.style.clipPath = `inset(0 0 0 ${(progress * 100).toFixed(2)}%)`;
+        }
+      } else if (showcaseFramesWrapRef.current) {
+        gsap.killTweensOf(showcaseFramesWrapRef.current);
+        showcaseFramesWrapRef.current.style.transform = `translate3d(${(dx * 0.14).toFixed(1)}px, 0, 0)`;
+      }
+    }
+  };
+
+  const handleShowcaseTouchEnd = () => {
+    const swipe = showcaseSwipeRef.current;
+    if (!swipe.active) return;
+
+    const wasHorizontal = swipe.lockedAxis === 'x';
+    const dx = swipe.lastX - swipe.startX;
+    const elapsed = Math.max(1, performance.now() - swipe.startTime);
+    const velocity = dx / elapsed;
+    const { startStage, viewportWidth } = swipe;
+
+    swipe.active = false;
+    swipe.lockedAxis = null;
+    setIsSwipingShowcase(false);
+
+    if (showcaseFramesWrapRef.current) {
+      gsap.to(showcaseFramesWrapRef.current, {
+        x: 0,
+        duration: 0.32,
+        ease: 'power3.out',
+        clearProps: 'transform',
+      });
+    }
+
+    if (!wasHorizontal) return;
+
+    const distanceThreshold = Math.min(54, viewportWidth * 0.16);
+    const isFastFlick = Math.abs(velocity) >= 0.35 && Math.abs(dx) >= 22;
+
+    if ((dx <= -distanceThreshold || (isFastFlick && dx < 0)) && startStage < SHOWCASE_STAGES.length - 1) {
+      setHasSwipedShowcase(true);
+      selectStage(startStage + 1);
+    } else if ((dx >= distanceThreshold || (isFastFlick && dx > 0)) && startStage > 0) {
+      setHasSwipedShowcase(true);
+      selectStage(startStage - 1);
+    } else {
+      selectStage(startStage);
+    }
+  };
+
+  const handleShowcaseKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      setHasSwipedShowcase(true);
+      selectStage(stageIdxRef.current + 1);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      setHasSwipedShowcase(true);
+      selectStage(stageIdxRef.current - 1);
+    }
   };
 
   const updateSplit = (pct: number, animate: boolean) => {
@@ -1598,8 +1794,24 @@ export default function App() {
 
         {/* SECTION 3: Pinned 4-Angle Environmental Showcase */}
         <section id="showcase" ref={showcaseRef} className="showcase-pin">
-          <div className="showcase-viewport" id="showcase-viewport">
-            <div className="showcase-frames" id="showcase-frames">
+          <div
+            className={`showcase-viewport${isSwipingShowcase ? ' is-swiping' : ''}`}
+            id="showcase-viewport"
+            role="region"
+            aria-roledescription="carousel"
+            aria-label="4-angle environmental bottle showcase"
+            tabIndex={0}
+            onTouchStart={handleShowcaseTouchStart}
+            onTouchMove={handleShowcaseTouchMove}
+            onTouchEnd={handleShowcaseTouchEnd}
+            onTouchCancel={handleShowcaseTouchEnd}
+            onKeyDown={handleShowcaseKeyDown}
+          >
+            <div
+              className="showcase-frames"
+              id="showcase-frames"
+              ref={showcaseFramesWrapRef}
+            >
               {SHOWCASE_STAGES.map((stage, i) => (
                 <figure
                   key={stage.src}
@@ -1613,6 +1825,7 @@ export default function App() {
                     src={stage.src}
                     alt={stage.alt}
                     className="showcase-img"
+                    draggable={false}
                   />
                 </figure>
               ))}
@@ -1622,7 +1835,18 @@ export default function App() {
               <div
                 className={`showcase-caption${captionBlur ? ' is-blurring' : ''}`}
                 id="showcase-caption"
+                aria-live="polite"
               >
+                <div className="showcase-kicker tabular-nums">
+                  <span>
+                    0{activeStage + 1} / 0{SHOWCASE_STAGES.length}
+                  </span>
+                  {!hasSwipedShowcase && (
+                    <span className="showcase-swipe-hint">
+                      <span aria-hidden="true">·</span> Swipe to explore
+                    </span>
+                  )}
+                </div>
                 <h2 className="caption-title" id="caption-title">
                   {SHOWCASE_STAGES[activeStage].title}
                 </h2>
@@ -1631,22 +1855,53 @@ export default function App() {
                 </p>
               </div>
 
-              <div
-                className="showcase-dots"
-                role="tablist"
-                aria-label="Showcase angles"
-              >
-                {SHOWCASE_STAGES.map((stage, i) => (
-                  <button
-                    key={stage.title}
-                    type="button"
-                    role="tab"
-                    aria-selected={activeStage === i}
-                    className={`stage-dot${activeStage === i ? ' is-active' : ''}`}
-                    aria-label={`Angle ${i + 1}`}
-                    onClick={() => selectStage(i)}
-                  />
-                ))}
+              <div className="showcase-nav-cluster">
+                <button
+                  type="button"
+                  className="showcase-arrow-btn"
+                  aria-label="Previous showcase angle"
+                  disabled={activeStage === 0}
+                  onClick={() => {
+                    setHasSwipedShowcase(true);
+                    selectStage(activeStage - 1);
+                  }}
+                >
+                  <ChevronLeft size={18} aria-hidden="true" />
+                </button>
+
+                <div
+                  className="showcase-dots"
+                  role="tablist"
+                  aria-label="Showcase angles"
+                >
+                  {SHOWCASE_STAGES.map((stage, i) => (
+                    <button
+                      key={stage.title}
+                      type="button"
+                      role="tab"
+                      aria-selected={activeStage === i}
+                      className={`stage-dot${activeStage === i ? ' is-active' : ''}`}
+                      aria-label={`Angle ${i + 1}: ${stage.title}`}
+                      onClick={() => {
+                        setHasSwipedShowcase(true);
+                        selectStage(i);
+                      }}
+                    />
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  className="showcase-arrow-btn"
+                  aria-label="Next showcase angle"
+                  disabled={activeStage === SHOWCASE_STAGES.length - 1}
+                  onClick={() => {
+                    setHasSwipedShowcase(true);
+                    selectStage(activeStage + 1);
+                  }}
+                >
+                  <ChevronRight size={18} aria-hidden="true" />
+                </button>
               </div>
             </div>
           </div>
