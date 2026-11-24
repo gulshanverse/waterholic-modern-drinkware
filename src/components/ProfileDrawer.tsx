@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CATEGORY_MAP, PRODUCTS, type Product } from '../data/products';
 import type {
   HydrationLog,
+  HydrationMilestoneStats,
   OrderRecord,
   SavedAddress,
   UserProfile,
@@ -15,6 +16,11 @@ import {
   ShareHydrationModal,
   type ShareMode,
 } from './ShareHydrationModal';
+import { MilestoneBadgesPanel } from './MilestoneBadgesPanel';
+import {
+  evaluateMilestones,
+  type MilestoneBadgeId,
+} from '../utils/hydrationMilestones';
 import { useAuth } from '../contexts/AuthContext';
 import { Cloud, Gift, LogIn, LogOut } from 'lucide-react';
 
@@ -27,12 +33,15 @@ interface ProfileDrawerProps {
   addresses: SavedAddress[];
   orders: OrderRecord[];
   hydration: HydrationLog;
+  milestoneStats: HydrationMilestoneStats;
+  recentlyUnlockedBadgeIds?: MilestoneBadgeId[];
   savedIds: Set<string>;
   studentDiscountActive: boolean;
   onClose: () => void;
   onUpdateProfile: (next: UserProfile) => void;
   onLogWater: (label: string, ml: number) => void;
   onResetWater: () => void;
+  onDismissMilestoneCelebration?: () => void;
   onAddAddress: (addr: Omit<SavedAddress, 'id'>) => void;
   onDeleteAddress: (id: string) => void;
   onSetDefaultAddress: (id: string) => void;
@@ -51,12 +60,15 @@ export function ProfileDrawer({
   addresses,
   orders,
   hydration,
+  milestoneStats,
+  recentlyUnlockedBadgeIds = [],
   savedIds,
   studentDiscountActive,
   onClose,
   onUpdateProfile,
   onLogWater,
   onResetWater,
+  onDismissMilestoneCelebration,
   onAddAddress,
   onDeleteAddress,
   onSetDefaultAddress,
@@ -150,9 +162,14 @@ export function ProfileDrawer({
         ? 'Alpine Club'
         : 'Hydration Member';
 
+  const unlockedMedalCount = useMemo(
+    () => evaluateMilestones(milestoneStats).filter((m) => m.unlocked).length,
+    [milestoneStats]
+  );
+
   const bottlesSaved = Math.max(
     12,
-    Math.round(hydration.consumedMl / 500) + orders.length * 48
+    Math.round(milestoneStats.totalMlAllTime / 500) + orders.length * 48
   );
 
   return (
@@ -181,6 +198,8 @@ export function ProfileDrawer({
               </h2>
               <div className="profile-header-meta">
                 <span>{memberTier}</span>
+                <span aria-hidden="true">·</span>
+                <span className="tabular-nums">{unlockedMedalCount}/6 Medals</span>
                 {studentDiscountActive && (
                   <>
                     <span aria-hidden="true">·</span>
@@ -383,6 +402,14 @@ export function ProfileDrawer({
                   </button>
                 </div>
               </div>
+
+              {/* Milestone Badges & Dynamic Animated SVG Medals */}
+              <MilestoneBadgesPanel
+                stats={milestoneStats}
+                recentlyUnlockedIds={recentlyUnlockedBadgeIds}
+                onLogWater={onLogWater}
+                onDismissCelebration={onDismissMilestoneCelebration}
+              />
 
               {/* Account Stats Summary */}
               <div className="profile-stats-grid tabular-nums">

@@ -25,6 +25,8 @@ export function initHeroCanvas(canvas: HTMLCanvasElement | null): () => void {
   uniform vec2 u_mouse;
   uniform vec2 u_res;
   uniform float u_isDark;
+  uniform vec3 u_baseCol;
+  uniform vec3 u_accentCol;
 
   float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
@@ -57,17 +59,9 @@ export function initHeroCanvas(canvas: HTMLCanvasElement | null): () => void {
     float dist = length(p - mPos);
     float glow = exp(-dist * dist * 2.4);
 
-    vec3 darkBg = vec3(0.024, 0.075, 0.122);
-    vec3 darkAccent = vec3(0.220, 0.741, 0.973);
-    vec3 lightBg = vec3(0.961, 0.980, 0.992);
-    vec3 lightAccent = vec3(0.008, 0.518, 0.780);
-
-    vec3 baseCol = mix(lightBg, darkBg, u_isDark);
-    vec3 waterCol = mix(lightAccent, darkAccent, u_isDark);
-
-    vec3 col = baseCol;
-    col = mix(col, waterCol, glow * (u_isDark > 0.5 ? 0.22 : 0.12));
-    col += waterCol * line * (u_isDark > 0.5 ? 0.11 : 0.065);
+    vec3 col = u_baseCol;
+    col = mix(col, u_accentCol, glow * (u_isDark > 0.5 ? 0.22 : 0.13));
+    col += u_accentCol * line * (u_isDark > 0.5 ? 0.11 : 0.065);
 
     outColor = vec4(col, 1.0);
   }`;
@@ -117,6 +111,38 @@ export function initHeroCanvas(canvas: HTMLCanvasElement | null): () => void {
   const uMouse = gl.getUniformLocation(prog, 'u_mouse');
   const uRes = gl.getUniformLocation(prog, 'u_res');
   const uIsDark = gl.getUniformLocation(prog, 'u_isDark');
+  const uBaseCol = gl.getUniformLocation(prog, 'u_baseCol');
+  const uAccentCol = gl.getUniformLocation(prog, 'u_accentCol');
+
+  const getPaletteTarget = () => {
+    const daypart = document.documentElement.getAttribute('data-daypart');
+    const isDark =
+      document.documentElement.getAttribute('data-theme') === 'dark';
+    if (daypart === 'morning') {
+      return {
+        isDark: 0.0,
+        base: [0.992, 0.976, 0.953] as [number, number, number], // #fdf9f3 Soft Amber Ivory
+        accent: [0.761, 0.427, 0.094] as [number, number, number], // #c26d18 Warm Sunrise Amber
+      };
+    }
+    if (daypart === 'evening' || isDark) {
+      return {
+        isDark: 1.0,
+        base: [0.035, 0.043, 0.114] as [number, number, number], // #090b1d Deep Evening Indigo
+        accent: [0.506, 0.549, 0.973] as [number, number, number], // #818cf8 Luminous Indigo
+      };
+    }
+    return {
+      isDark: 0.0,
+      base: [0.961, 0.98, 0.992] as [number, number, number], // #f5fafd Glacial Ice
+      accent: [0.008, 0.518, 0.78] as [number, number, number], // #0284c7 Pure Azure
+    };
+  };
+
+  const initPal = getPaletteTarget();
+  const curBase: [number, number, number] = [...initPal.base];
+  const curAccent: [number, number, number] = [...initPal.accent];
+  let curIsDark = initPal.isDark;
 
   let mouseX = 0.68;
   let mouseY = 0.48;
@@ -154,8 +180,14 @@ export function initHeroCanvas(canvas: HTMLCanvasElement | null): () => void {
     mouseX += (targetX - mouseX) * 0.08;
     mouseY += (targetY - mouseY) * 0.08;
 
-    const isDark =
-      document.documentElement.getAttribute('data-theme') !== 'light' ? 1.0 : 0.0;
+    const targetPal = getPaletteTarget();
+    const lerpSpeed = prefersReduced ? 1.0 : 0.08;
+    curIsDark += (targetPal.isDark - curIsDark) * lerpSpeed;
+    for (let i = 0; i < 3; i++) {
+      curBase[i] += (targetPal.base[i] - curBase[i]) * lerpSpeed;
+      curAccent[i] += (targetPal.accent[i] - curAccent[i]) * lerpSpeed;
+    }
+
     const t = prefersReduced ? 0.0 : (now - start) * 0.001;
 
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -167,7 +199,9 @@ export function initHeroCanvas(canvas: HTMLCanvasElement | null): () => void {
     gl.uniform1f(uTime, t);
     gl.uniform2f(uMouse, mouseX, mouseY);
     gl.uniform2f(uRes, canvas.width, canvas.height);
-    gl.uniform1f(uIsDark, isDark);
+    gl.uniform1f(uIsDark, curIsDark);
+    gl.uniform3f(uBaseCol, curBase[0], curBase[1], curBase[2]);
+    gl.uniform3f(uAccentCol, curAccent[0], curAccent[1], curAccent[2]);
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 

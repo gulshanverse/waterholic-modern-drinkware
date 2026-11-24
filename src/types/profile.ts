@@ -26,6 +26,16 @@ export interface HydrationLog {
   entries: { id: string; label: string; ml: number; time: string }[];
 }
 
+export interface HydrationMilestoneStats {
+  dailyTotals: Record<string, number>;
+  totalMlAllTime: number;
+  currentStreakDays: number;
+  bestStreakDays: number;
+  daysGoalMet: number;
+  dailyGoalMl: number;
+  todayConsumedMl: number;
+}
+
 export interface OrderRecord {
   orderNumber: string;
   date: string;

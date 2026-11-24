@@ -38,17 +38,29 @@ import {
 } from './components/LaunchExperienceSection';
 import { BottleFinderModal } from './components/BottleFinderModal';
 import { FastFlowPriceWave } from './components/FastFlowPriceWave';
+import {
+  DAYPART_META,
+  formatShortLocalTime,
+  getDaypartForDate,
+  resolveDaypart,
+  type Daypart,
+  type ThemeMode,
+} from './utils/circadianTheme';
 import { useAuth } from './contexts/AuthContext';
 import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Clock,
   Compass,
   Copy,
   Heart,
   Menu,
+  Moon,
   PenTool,
   Sparkles,
+  Sun,
+  Sunrise,
   X,
 } from 'lucide-react';
 import bottleStudioLogoImg from './assets/images/waterholic_studio_logo_bottle_1795462018573.jpg';
@@ -58,11 +70,18 @@ import bottleColdLogoImg from './assets/images/waterholic_thermal_cold_logo_1795
 import bottleHotLogoImg from './assets/images/waterholic_thermal_hot_logo_1795462070671.jpg';
 import type {
   HydrationLog,
+  HydrationMilestoneStats,
   OrderRecord,
   ProductReview,
   SavedAddress,
   UserProfile,
 } from './types/profile';
+import {
+  buildDefaultHydrationHistory,
+  computeHydrationMilestoneStats,
+  evaluateMilestones,
+  type MilestoneBadgeId,
+} from './utils/hydrationMilestones';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -234,10 +253,17 @@ const SHOWCASE_STAGES = [
 ];
 
 export default function App() {
-  // Always open in light mode by default, persist user choice
-  const [theme, setTheme] = useState<'dark' | 'light'>(() =>
-    readStored<'dark' | 'light'>('wh_theme_v1', 'light')
+  // Circadian time-of-day dynamic theme (Auto defaults to local time: Soft Amber morning, Glacial Azure day, Deep Indigo evening)
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() =>
+    readStored<ThemeMode>('wh_theme_mode_v2', 'auto')
   );
+  const [clockNow, setClockNow] = useState<Date>(() => new Date());
+  const [themeMenuOpen, setThemeMenuOpen] = useState<boolean>(false);
+  const themeMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const activeDaypart: Daypart = resolveDaypart(themeMode, clockNow);
+  const theme: 'dark' | 'light' = DAYPART_META[activeDaypart].theme;
+  const liveClockDaypart: Daypart = getDaypartForDate(clockNow);
   const [finish, setFinish] = useState<FinishId>('blue');
   const [size, setSize] = useState<SizeLabel>('950 ml');
   const [price, setPrice] = useState<number>(48);
@@ -303,6 +329,24 @@ export default function App() {
     }
     return saved;
   });
+  const [hydrationHistory, setHydrationHistory] = useState<
+    Record<string, number>
+  >(() => {
+    const today = getTodayKey();
+    const fallback = buildDefaultHydrationHistory(today, 750);
+    const saved = readStored<Record<string, number>>(
+      'wh_hydration_history_v1',
+      fallback
+    );
+    if (!saved || Object.keys(saved).length === 0) {
+      return fallback;
+    }
+    return saved;
+  });
+  const [recentlyUnlockedBadgeIds, setRecentlyUnlockedBadgeIds] = useState<
+    MilestoneBadgeId[]
+  >([]);
+  const knownUnlockedBadgeIdsRef = useRef<Set<MilestoneBadgeId> | null>(null);
   const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>(() =>
     readStored<string[]>('wh_recent_v1', [])
   );
@@ -387,10 +431,42 @@ export default function App() {
     price: number;
   }>({ finish: 'blue', size: '950 ml', price: 48 });
 
+  // Keep Auto circadian theme synced to local clock every minute
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setClockNow(new Date());
+    }, 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  // Close circadian theme popover on outside pointerdown or Escape
+  useEffect(() => {
+    if (!themeMenuOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (
+        themeMenuRef.current &&
+        !themeMenuRef.current.contains(e.target as Node)
+      ) {
+        setThemeMenuOpen(false);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setThemeMenuOpen(false);
+    };
+    window.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [themeMenuOpen]);
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-daypart', activeDaypart);
+    writeStored('wh_theme_mode_v2', themeMode);
     writeStored('wh_theme_v1', theme);
-  }, [theme]);
+  }, [theme, activeDaypart, themeMode]);
 
   const showLaunchRibbon = announcementVisible && launchRibbonRevealed;
 
@@ -486,7 +562,18 @@ export default function App() {
 
   useEffect(() => {
     writeStored('wh_hydration_v1', hydration);
+    setHydrationHistory((prev) => {
+      if (prev[hydration.dateKey] === hydration.consumedMl) return prev;
+      return {
+        ...prev,
+        [hydration.dateKey]: hydration.consumedMl,
+      };
+    });
   }, [hydration]);
+
+  useEffect(() => {
+    writeStored('wh_hydration_history_v1', hydrationHistory);
+  }, [hydrationHistory]);
 
   useEffect(() => {
     writeStored('wh_recent_v1', recentlyViewedIds);
@@ -1294,6 +1381,48 @@ export default function App() {
     [showToast]
   );
 
+  const milestoneStats: HydrationMilestoneStats = useMemo(
+    () =>
+      computeHydrationMilestoneStats(
+        hydrationHistory,
+        hydration.dateKey,
+        hydration.consumedMl,
+        profile.dailyGoalMl
+      ),
+    [hydrationHistory, hydration.dateKey, hydration.consumedMl, profile.dailyGoalMl]
+  );
+
+  useEffect(() => {
+    const evaluated = evaluateMilestones(milestoneStats);
+    const currentlyUnlocked = evaluated
+      .filter((item) => item.unlocked)
+      .map((item) => item.badge.id);
+
+    if (knownUnlockedBadgeIdsRef.current === null) {
+      knownUnlockedBadgeIdsRef.current = new Set(currentlyUnlocked);
+      return;
+    }
+
+    const newlyUnlocked = currentlyUnlocked.filter(
+      (id) => !knownUnlockedBadgeIdsRef.current?.has(id)
+    );
+
+    if (newlyUnlocked.length > 0) {
+      newlyUnlocked.forEach((id) => knownUnlockedBadgeIdsRef.current?.add(id));
+      setRecentlyUnlockedBadgeIds((prev) =>
+        Array.from(new Set([...prev, ...newlyUnlocked]))
+      );
+      const titles = newlyUnlocked
+        .map(
+          (id) => evaluated.find((item) => item.badge.id === id)?.badge.title
+        )
+        .filter((v): v is string => Boolean(v));
+      if (titles.length > 0) {
+        showToast(`Milestone Medal Unlocked: ${titles.join(' & ')}`);
+      }
+    }
+  }, [milestoneStats, showToast]);
+
   const handleLogWater = useCallback(
     (label: string, ml: number) => {
       const today = getTodayKey();
@@ -1611,49 +1740,133 @@ export default function App() {
               </svg>
             </button>
 
-            <button
-              type="button"
-              className="icon-btn theme-toggle"
-              id="theme-toggle"
-              aria-label="Toggle color theme"
-              title="Switch light or dark theme"
-              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-            >
-              <svg
-                id="theme-icon-sun"
-                width="19"
-                height="19"
-                viewBox="0 0 256 256"
-                fill="none"
-                aria-hidden="true"
+            <div className="theme-switcher-wrap" ref={themeMenuRef}>
+              <button
+                type="button"
+                className={`icon-btn theme-toggle${
+                  themeMode === 'auto' ? ' is-auto-synced' : ''
+                }`}
+                id="theme-toggle"
+                aria-label={`Dynamic theme: ${DAYPART_META[activeDaypart].label} ${DAYPART_META[activeDaypart].paletteName}${
+                  themeMode === 'auto' ? ' (Auto)' : ''
+                }`}
+                aria-expanded={themeMenuOpen}
+                aria-haspopup="menu"
+                title={`Time-of-day palette: ${DAYPART_META[activeDaypart].paletteName} (${
+                  themeMode === 'auto' ? 'Auto' : 'Manual'
+                })`}
+                onClick={() => setThemeMenuOpen((prev) => !prev)}
               >
-                <circle cx="128" cy="128" r="56" stroke="currentColor" strokeWidth="18" />
-                <line x1="128" y1="24" x2="128" y2="44" stroke="currentColor" strokeWidth="18" strokeLinecap="round" />
-                <line x1="128" y1="212" x2="128" y2="232" stroke="currentColor" strokeWidth="18" strokeLinecap="round" />
-                <line x1="24" y1="128" x2="44" y2="128" stroke="currentColor" strokeWidth="18" strokeLinecap="round" />
-                <line x1="212" y1="128" x2="232" y2="128" stroke="currentColor" strokeWidth="18" strokeLinecap="round" />
-                <line x1="54" y1="54" x2="68" y2="68" stroke="currentColor" strokeWidth="18" strokeLinecap="round" />
-                <line x1="188" y1="188" x2="202" y2="202" stroke="currentColor" strokeWidth="18" strokeLinecap="round" />
-                <line x1="54" y1="202" x2="68" y2="188" stroke="currentColor" strokeWidth="18" strokeLinecap="round" />
-                <line x1="188" y1="68" x2="202" y2="54" stroke="currentColor" strokeWidth="18" strokeLinecap="round" />
-              </svg>
-              <svg
-                id="theme-icon-moon"
-                width="19"
-                height="19"
-                viewBox="0 0 256 256"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M210.69 158.18A96.78 96.78 0 0 1 192 160 96.11 96.11 0 0 1 96 64a96.78 96.78 0 0 1 1.82-18.69A96.04 96.04 0 1 0 210.69 158.18Z"
-                  stroke="currentColor"
-                  strokeWidth="18"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
+                {activeDaypart === 'morning' ? (
+                  <Sunrise size={19} strokeWidth={2} aria-hidden="true" />
+                ) : activeDaypart === 'evening' ? (
+                  <Moon size={18} strokeWidth={2} aria-hidden="true" />
+                ) : (
+                  <Sun size={19} strokeWidth={2} aria-hidden="true" />
+                )}
+                {themeMode === 'auto' && (
+                  <span className="theme-auto-pip" aria-hidden="true" />
+                )}
+              </button>
+
+              {themeMenuOpen && (
+                <div
+                  className="circadian-popover"
+                  role="menu"
+                  aria-label="Time-of-day brand palette"
+                >
+                  <div className="circadian-popover-head">
+                    <span className="circadian-popover-eyebrow">
+                      Dynamic Time Palette
+                    </span>
+                    <span className="circadian-popover-clock tabular-nums">
+                      <Clock size={12} aria-hidden="true" />
+                      {formatShortLocalTime(clockNow)}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={themeMode === 'auto'}
+                    className={`circadian-option${
+                      themeMode === 'auto' ? ' is-active' : ''
+                    }`}
+                    onClick={() => {
+                      setClockNow(new Date());
+                      setThemeMode('auto');
+                      setThemeMenuOpen(false);
+                      showToast(
+                        `Synced to local time — ${DAYPART_META[liveClockDaypart].paletteName} palette`
+                      );
+                    }}
+                  >
+                    <span
+                      className="circadian-swatch circadian-swatch--auto"
+                      aria-hidden="true"
+                    />
+                    <span className="circadian-option-copy">
+                      <span className="circadian-option-title">
+                        Auto · Time of Day
+                      </span>
+                      <span className="circadian-option-sub">
+                        Now: {DAYPART_META[liveClockDaypart].label} (
+                        {DAYPART_META[liveClockDaypart].paletteName})
+                      </span>
+                    </span>
+                    {themeMode === 'auto' && (
+                      <Check size={15} className="circadian-check" aria-hidden="true" />
+                    )}
+                  </button>
+
+                  {(['morning', 'day', 'evening'] as Daypart[]).map((dp) => {
+                    const meta = DAYPART_META[dp];
+                    const selected = themeMode === dp;
+                    return (
+                      <button
+                        key={dp}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={selected}
+                        className={`circadian-option${
+                          selected ? ' is-active' : ''
+                        }`}
+                        onClick={() => {
+                          setThemeMode(dp);
+                          setThemeMenuOpen(false);
+                          showToast(
+                            `Switched to ${meta.label} · ${meta.paletteName} palette`
+                          );
+                        }}
+                      >
+                        <span
+                          className="circadian-swatch"
+                          style={{
+                            background: `linear-gradient(135deg, ${meta.swatchSurface} 45%, ${meta.swatchPrimary} 45%)`,
+                          }}
+                          aria-hidden="true"
+                        />
+                        <span className="circadian-option-copy">
+                          <span className="circadian-option-title">
+                            {meta.label} · {meta.paletteName}
+                          </span>
+                          <span className="circadian-option-sub tabular-nums">
+                            {meta.windowLabel}
+                          </span>
+                        </span>
+                        {selected && (
+                          <Check
+                            size={15}
+                            className="circadian-check"
+                            aria-hidden="true"
+                          />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             <button
               type="button"
@@ -2053,6 +2266,7 @@ export default function App() {
         {/* SECTION 2.7: Interactive Three.js 3D Bottle Studio */}
         <BottleStudio3D
           theme={theme}
+          daypart={activeDaypart}
           activeFinish={finish}
           onSyncFinish={(nextFinish: StudioFinishKey) => selectFinish(nextFinish)}
           onAddConfiguredToBag={(cfg) => {
@@ -2735,9 +2949,18 @@ export default function App() {
         savedCount={savedIds.size}
         compareCount={comparedProducts.length}
         studentDiscountActive={studentDiscountActive}
-        onToggleTheme={() =>
-          setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))
-        }
+        onToggleTheme={() => {
+          const order: ThemeMode[] = ['morning', 'day', 'evening', 'auto'];
+          const nextMode =
+            order[(order.indexOf(themeMode) + 1) % order.length];
+          setThemeMode(nextMode);
+          const resolved = resolveDaypart(nextMode, new Date());
+          showToast(
+            nextMode === 'auto'
+              ? `Auto Time Palette active (${DAYPART_META[resolved].paletteName})`
+              : `${DAYPART_META[resolved].label} · ${DAYPART_META[resolved].paletteName} palette`
+          );
+        }}
         onJumpToCategory={jumpToCategory}
         onOpenProfile={openProfileAt}
         onOpenBag={() => setDrawerOpen(true)}
@@ -2801,12 +3024,15 @@ export default function App() {
         addresses={addresses}
         orders={orders}
         hydration={hydration}
+        milestoneStats={milestoneStats}
+        recentlyUnlockedBadgeIds={recentlyUnlockedBadgeIds}
         savedIds={savedIds}
         studentDiscountActive={studentDiscountActive}
         onClose={() => setProfileDrawerOpen(false)}
         onUpdateProfile={handleUpdateProfile}
         onLogWater={handleLogWater}
         onResetWater={handleResetWater}
+        onDismissMilestoneCelebration={() => setRecentlyUnlockedBadgeIds([])}
         onAddAddress={handleAddAddress}
         onDeleteAddress={handleDeleteAddress}
         onSetDefaultAddress={handleSetDefaultAddress}

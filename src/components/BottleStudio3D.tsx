@@ -2,14 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import gsap from 'gsap';
 import {
   Camera,
   ChevronDown,
   ChevronUp,
+  Info,
   Layers,
   RotateCcw,
   ShoppingBag,
   Sparkles,
+  X,
 } from 'lucide-react';
 
 export type StudioFinishKey =
@@ -120,8 +123,114 @@ const CAMERA_PRESETS: Record<
   cutaway: { pos: [0.0, 2.45, 5.8], target: [0, 1.85, 0], label: 'Exploded' },
 };
 
+type BottlePartId =
+  | 'lid'
+  | 'seal'
+  | 'collar'
+  | 'chamber'
+  | 'body'
+  | 'water'
+  | 'boot';
+
+interface BottlePartSpec {
+  id: BottlePartId;
+  code: string;
+  title: string;
+  summary: string;
+  accent: string;
+  specs: { label: string; value: string }[];
+}
+
+const BOTTLE_PART_SPECS: Record<BottlePartId, BottlePartSpec> = {
+  lid: {
+    id: 'lid',
+    code: '01 · CAP SYSTEM',
+    title: 'Fast-Flow Chug Lid & Loop',
+    summary:
+      'Dual-threaded leakproof polymer cap with 36-rib tactile knurling and steel-pinned hinged carry arch.',
+    accent: '#38bdf8',
+    specs: [
+      { label: 'Flow Rate', value: '42 ml/s Laminar' },
+      { label: 'Loop Load', value: '25 kg Tensile' },
+    ],
+  },
+  seal: {
+    id: 'seal',
+    code: '02 · HYDROSTATIC SEAL',
+    title: 'Silicone O-Ring Gasket',
+    summary:
+      'Compression-molded medical-grade elastomer locking pressure and temperature with zero BPA or PFAS.',
+    accent: '#0284c7',
+    specs: [
+      { label: 'Leak Rating', value: 'IP68 · 3.5 bar' },
+      { label: 'Material', value: 'FDA 21 CFR Sil.' },
+    ],
+  },
+  collar: {
+    id: 'collar',
+    code: '03 · NECK ARCHITECTURE',
+    title: 'Machined 18/8 Neck Collar',
+    summary:
+      'CNC-turned 304 brushed stainless thread and chamfered wide-mouth lip built for clear ice spheres.',
+    accent: '#94a3b8',
+    specs: [
+      { label: 'Mouth Dia.', value: '54 mm Wide-Pour' },
+      { label: 'Alloy Spec', value: '304 Surgical 18/8' },
+    ],
+  },
+  chamber: {
+    id: 'chamber',
+    code: '04 · THERMAL CORE',
+    title: 'Copper Vacuum Chamber',
+    summary:
+      'Evacuated double-wall core plated with a 0.18 mm pure copper radiation barrier to arrest heat transfer.',
+    accent: '#d97706',
+    specs: [
+      { label: 'Vacuum Spec', value: '10⁻⁵ Torr Core' },
+      { label: 'Retention', value: '24h Cold · 12h Hot' },
+    ],
+  },
+  body: {
+    id: 'body',
+    code: '05 · OUTER CHASSIS',
+    title: 'Double-Wall Powder Chassis',
+    summary:
+      'Micro-textured architectural matte powder coat (or 3.8 mm borosilicate shell in Transparent) with laser crest.',
+    accent: '#0284c7',
+    specs: [
+      { label: 'Condensation', value: '0% Exterior Sweat' },
+      { label: 'Finish', value: 'Scratch-Guard Coat' },
+    ],
+  },
+  water: {
+    id: 'water',
+    code: '06 · PURE CORE',
+    title: 'Electro-Polished Interior',
+    summary:
+      'Mirror-smooth inner wall prevents mineral buildup and flavor carry-over between coffee, electrolytes, and water.',
+    accent: '#38bdf8',
+    specs: [
+      { label: 'Taste Transfer', value: 'Zero Metallic' },
+      { label: 'Cold Target', value: '4°C Benchmark' },
+    ],
+  },
+  boot: {
+    id: 'boot',
+    code: '07 · IMPACT BASE',
+    title: 'Acoustic Silicone Base Boot',
+    summary:
+      'Removable high-durometer elastomer sleeve engineered for whisper-quiet studio desks and trail drop defense.',
+    accent: '#0ea5e9',
+    specs: [
+      { label: 'Drop Spec', value: '1.5 m Impact Guard' },
+      { label: 'Wall Gauge', value: '2.8 mm Soft-Grip' },
+    ],
+  },
+};
+
 interface BottleStudio3DProps {
   theme: 'light' | 'dark';
+  daypart?: 'morning' | 'day' | 'evening';
   activeFinish: StudioFinishKey;
   onSyncFinish: (finish: StudioFinishKey) => void;
   onAddConfiguredToBag: (config: {
@@ -235,6 +344,7 @@ function createContactShadowTexture(): THREE.CanvasTexture {
 
 export function BottleStudio3D({
   theme,
+  daypart = 'day',
   activeFinish,
   onSyncFinish,
   onAddConfiguredToBag,
@@ -249,10 +359,101 @@ export function BottleStudio3D({
   const [chillMist, setChillMist] = useState<boolean>(true);
   const [cameraPreset, setCameraPreset] = useState<CameraPresetKey>('hero');
   const [dockCollapsed, setDockCollapsed] = useState<boolean>(false);
+  const [hoveredPart, setHoveredPart] = useState<BottlePartId | null>(null);
+  const [pinnedPart, setPinnedPart] = useState<BottlePartId | null>(null);
+
+  const tooltipAnchorRef = useRef<HTMLDivElement | null>(null);
+  const tooltipCardRef = useRef<HTMLDivElement | null>(null);
+  const tooltipPosRef = useRef<{ x: number; y: number }>({ x: 24, y: 76 });
+  const quickXRef = useRef<((v: number) => gsap.core.Tween) | null>(null);
+  const quickYRef = useRef<((v: number) => gsap.core.Tween) | null>(null);
+  const hoveredPartRef = useRef<BottlePartId | null>(null);
+  const pinnedPartRef = useRef<BottlePartId | null>(null);
+
+  const activePartId = hoveredPart ?? pinnedPart;
+  const activePartSpec = activePartId ? BOTTLE_PART_SPECS[activePartId] : null;
+
+  useEffect(() => {
+    pinnedPartRef.current = pinnedPart;
+  }, [pinnedPart]);
+
+  // Set up silky GSAP quickTo cursor tracking for tooltip container
+  useEffect(() => {
+    const anchor = tooltipAnchorRef.current;
+    if (!anchor) return;
+    quickXRef.current = gsap.quickTo(anchor, 'x', {
+      duration: 0.18,
+      ease: 'power3.out',
+    });
+    quickYRef.current = gsap.quickTo(anchor, 'y', {
+      duration: 0.18,
+      ease: 'power3.out',
+    });
+    gsap.set(anchor, {
+      x: tooltipPosRef.current.x,
+      y: tooltipPosRef.current.y,
+    });
+    return () => {
+      quickXRef.current = null;
+      quickYRef.current = null;
+    };
+  }, [activePartId !== null]);
+
+  // GSAP pop-in animation whenever the inspected 3D component appears or changes
+  useEffect(() => {
+    if (!activePartId) return;
+    const card = tooltipCardRef.current;
+    const anchor = tooltipAnchorRef.current;
+    if (!card || !anchor) return;
+
+    gsap.set(anchor, {
+      x: tooltipPosRef.current.x,
+      y: tooltipPosRef.current.y,
+    });
+
+    const reducedMotion = window.matchMedia?.(
+      '(prefers-reduced-motion: reduce)'
+    ).matches;
+    if (reducedMotion) {
+      gsap.set(card, { opacity: 1, scale: 1, y: 0 });
+      return;
+    }
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        card,
+        { opacity: 0, scale: 0.86, y: 12 },
+        {
+          opacity: 1,
+          scale: 1,
+          y: 0,
+          duration: 0.34,
+          ease: 'back.out(1.75)',
+          overwrite: 'auto',
+        }
+      );
+      gsap.fromTo(
+        '.studio3d-tooltip-spec',
+        { opacity: 0, y: 6 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.24,
+          stagger: 0.05,
+          delay: 0.08,
+          ease: 'power2.out',
+          overwrite: 'auto',
+        }
+      );
+    }, card);
+
+    return () => ctx.revert();
+  }, [activePartId]);
 
   // Refs synced cleanly into the Three.js animation loop without rebuilding the WebGL context
   const stateRef = useRef({
     theme,
+    daypart,
     studioFinish,
     studioSize,
     exploded,
@@ -264,7 +465,7 @@ export function BottleStudio3D({
 
   const sceneApiRef = useRef<{
     updateFinish: (f: StudioFinishKey, s: StudioSizeKey) => void;
-    updateTheme: (t: 'light' | 'dark') => void;
+    updateTheme: (t: 'light' | 'dark', dp: 'morning' | 'day' | 'evening') => void;
     jumpCamera: (preset: CameraPresetKey) => void;
     capturePng: () => string | null;
   } | null>(null);
@@ -276,6 +477,7 @@ export function BottleStudio3D({
   useEffect(() => {
     stateRef.current = {
       theme,
+      daypart,
       studioFinish,
       studioSize,
       exploded,
@@ -287,6 +489,7 @@ export function BottleStudio3D({
     sceneApiRef.current?.updateFinish(studioFinish, studioSize);
   }, [
     theme,
+    daypart,
     studioFinish,
     studioSize,
     exploded,
@@ -297,8 +500,8 @@ export function BottleStudio3D({
   ]);
 
   useEffect(() => {
-    sceneApiRef.current?.updateTheme(theme);
-  }, [theme]);
+    sceneApiRef.current?.updateTheme(theme, daypart);
+  }, [theme, daypart]);
 
   useEffect(() => {
     const container = mountRef.current;
@@ -335,9 +538,15 @@ export function BottleStudio3D({
     container.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
+    const morningBg = new THREE.Color('#F6EEE2');
     const lightBg = new THREE.Color('#E8F3FA');
-    const darkBg = new THREE.Color('#071726');
-    const initialBg = stateRef.current.theme === 'dark' ? darkBg : lightBg;
+    const eveningBg = new THREE.Color('#0B0E24');
+    const resolveStudioBg = (t: 'light' | 'dark', dp: 'morning' | 'day' | 'evening') => {
+      if (dp === 'morning') return morningBg;
+      if (dp === 'evening' || t === 'dark') return eveningBg;
+      return lightBg;
+    };
+    const initialBg = resolveStudioBg(stateRef.current.theme, stateRef.current.daypart);
     scene.background = initialBg.clone();
     scene.fog = new THREE.FogExp2(initialBg.getHex(), 0.038);
 
@@ -621,6 +830,147 @@ export function BottleStudio3D({
     pinMesh.position.y = 2.95;
     capGroup.add(pinMesh);
 
+    // Tag meshes with component part IDs for interactive 3D raycast tooltips
+    bootMesh.userData.partId = 'boot' as BottlePartId;
+    bodyMesh.userData.partId = 'body' as BottlePartId;
+    coreMesh.userData.partId = 'chamber' as BottlePartId;
+    waterMesh.userData.partId = 'water' as BottlePartId;
+    collarMesh.userData.partId = 'collar' as BottlePartId;
+    gasketMesh.userData.partId = 'seal' as BottlePartId;
+    lidMesh.userData.partId = 'lid' as BottlePartId;
+    ribInst.userData.partId = 'lid' as BottlePartId;
+    loopMesh.userData.partId = 'lid' as BottlePartId;
+    pinMesh.userData.partId = 'lid' as BottlePartId;
+
+    const inspectableMeshes: THREE.Object3D[] = [
+      lidMesh,
+      ribInst,
+      loopMesh,
+      pinMesh,
+      gasketMesh,
+      collarMesh,
+      coreMesh,
+      bodyMesh,
+      waterMesh,
+      bootMesh,
+    ];
+
+    const partMaterials: Record<
+      BottlePartId,
+      THREE.MeshStandardMaterial[]
+    > = {
+      lid: [lidMat, ribMat, loopMat],
+      seal: [gasketMat],
+      collar: [steelMat],
+      chamber: [coreMat],
+      body: [bodyMat],
+      water: [waterMat],
+      boot: [bootMat],
+    };
+
+    const highlightTint = new THREE.Color('#0ea5e9');
+    const chamberTint = new THREE.Color('#f59e0b');
+    (Object.keys(partMaterials) as BottlePartId[]).forEach((pid) => {
+      const tint = pid === 'chamber' ? chamberTint : highlightTint;
+      partMaterials[pid].forEach((mat) => {
+        mat.emissive.copy(tint);
+        mat.emissiveIntensity = 0;
+      });
+    });
+
+    // Raycaster & pointer interaction handlers for hover/tap component inspection
+    const raycaster = new THREE.Raycaster();
+    const pointerNdc = new THREE.Vector2();
+    let isOrbitDragging = false;
+    let pointerDownPos: { x: number; y: number } | null = null;
+
+    const clampTooltipCoords = (localX: number, localY: number, w: number, h: number) => {
+      const cardW = Math.min(284, w - 24);
+      const cardH = 166;
+      const offsetX = localX > w * 0.56 ? -(cardW + 18) : 20;
+      const offsetY = localY > h * 0.62 ? -(cardH + 14) : -24;
+      const cx = Math.min(Math.max(12, localX + offsetX), Math.max(12, w - cardW - 12));
+      const cy = Math.min(Math.max(58, localY + offsetY), Math.max(58, h - cardH - 16));
+      return { x: cx, y: cy };
+    };
+
+    const pickPartAtClientPoint = (clientX: number, clientY: number) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return null;
+      const localX = clientX - rect.left;
+      const localY = clientY - rect.top;
+      pointerNdc.x = (localX / rect.width) * 2 - 1;
+      pointerNdc.y = -(localY / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointerNdc, camera);
+      const hits = raycaster.intersectObjects(inspectableMeshes, false);
+      const visibleHit = hits.find((h) => h.object.visible);
+      if (!visibleHit) return null;
+      const partId = visibleHit.object.userData.partId as
+        | BottlePartId
+        | undefined;
+      if (!partId) return null;
+      const coords = clampTooltipCoords(localX, localY, rect.width, rect.height);
+      return { partId, coords };
+    };
+
+    const onCanvasPointerMove = (e: PointerEvent) => {
+      if (e.pointerType === 'touch' || isOrbitDragging) return;
+      const hit = pickPartAtClientPoint(e.clientX, e.clientY);
+      if (hit) {
+        renderer.domElement.style.cursor = 'pointer';
+        tooltipPosRef.current = hit.coords;
+        quickXRef.current?.(hit.coords.x);
+        quickYRef.current?.(hit.coords.y);
+        if (hoveredPartRef.current !== hit.partId) {
+          hoveredPartRef.current = hit.partId;
+          setHoveredPart(hit.partId);
+        }
+      } else {
+        renderer.domElement.style.cursor = 'grab';
+        if (hoveredPartRef.current !== null) {
+          hoveredPartRef.current = null;
+          setHoveredPart(null);
+        }
+      }
+    };
+
+    const onCanvasPointerLeave = () => {
+      renderer.domElement.style.cursor = 'grab';
+      if (hoveredPartRef.current !== null) {
+        hoveredPartRef.current = null;
+        setHoveredPart(null);
+      }
+    };
+
+    const onCanvasPointerDown = (e: PointerEvent) => {
+      pointerDownPos = { x: e.clientX, y: e.clientY };
+    };
+
+    const onCanvasPointerUp = (e: PointerEvent) => {
+      if (!pointerDownPos) return;
+      const moved = Math.hypot(
+        e.clientX - pointerDownPos.x,
+        e.clientY - pointerDownPos.y
+      );
+      pointerDownPos = null;
+      // Treat crisp tap/click (< 7px drag) as component inspection pin toggle (great for touch!)
+      if (moved > 7) return;
+      const hit = pickPartAtClientPoint(e.clientX, e.clientY);
+      if (hit) {
+        tooltipPosRef.current = hit.coords;
+        quickXRef.current?.(hit.coords.x);
+        quickYRef.current?.(hit.coords.y);
+        setPinnedPart((prev) => (prev === hit.partId ? null : hit.partId));
+      } else if (pinnedPartRef.current !== null) {
+        setPinnedPart(null);
+      }
+    };
+
+    renderer.domElement.addEventListener('pointermove', onCanvasPointerMove);
+    renderer.domElement.addEventListener('pointerleave', onCanvasPointerLeave);
+    renderer.domElement.addEventListener('pointerdown', onCanvasPointerDown);
+    renderer.domElement.addEventListener('pointerup', onCanvasPointerUp);
+
     // 10. Chilled Condensation Micro-Droplets (InstancedMesh floating gently around flask)
     const dropCount = 48;
     const dropGeo = new THREE.SphereGeometry(0.022, 10, 10);
@@ -682,13 +1032,25 @@ export function BottleStudio3D({
       bottleRoot.scale.set(sz.scaleXZ, sz.scaleY, sz.scaleXZ);
     };
 
-    const applyThemeColors = (t: 'light' | 'dark') => {
-      const bg = t === 'dark' ? darkBg : lightBg;
+    const applyThemeColors = (
+      t: 'light' | 'dark',
+      dp: 'morning' | 'day' | 'evening'
+    ) => {
+      const bg = resolveStudioBg(t, dp);
       scene.background = bg.clone();
       scene.fog = new THREE.FogExp2(bg.getHex(), 0.038);
-      plinthMat.color.setHex(t === 'dark' ? 0x0f253a : 0xdcebf6);
-      floorMat.color.setHex(t === 'dark' ? 0x071726 : 0xe8f3fa);
+      if (dp === 'morning') {
+        plinthMat.color.setHex(0xede0cc);
+        floorMat.color.setHex(0xf6eee2);
+      } else if (dp === 'evening' || t === 'dark') {
+        plinthMat.color.setHex(0x161b3d);
+        floorMat.color.setHex(0x0b0e24);
+      } else {
+        plinthMat.color.setHex(0xdcebf6);
+        floorMat.color.setHex(0xe8f3fa);
+      }
     };
+    applyThemeColors(stateRef.current.theme, stateRef.current.daypart);
 
     sceneApiRef.current = {
       updateFinish: applyFinishAndSize,
@@ -708,8 +1070,17 @@ export function BottleStudio3D({
     // Stop preset lerp as soon as user grabs orbit controls
     const onControlStart = () => {
       camLerpActive = false;
+      isOrbitDragging = true;
+      if (hoveredPartRef.current !== null) {
+        hoveredPartRef.current = null;
+        setHoveredPart(null);
+      }
+    };
+    const onControlEnd = () => {
+      isOrbitDragging = false;
     };
     controls.addEventListener('start', onControlStart);
+    controls.addEventListener('end', onControlEnd);
 
     // Responsive ResizeObserver
     const ro = new ResizeObserver(() => {
@@ -799,6 +1170,20 @@ export function BottleStudio3D({
         }
       }
 
+      // Subtle 3D emissive highlight on the currently inspected bottle component
+      const inspectedId = hoveredPartRef.current ?? pinnedPartRef.current;
+      (Object.keys(partMaterials) as BottlePartId[]).forEach((pid) => {
+        const targetIntensity =
+          inspectedId === pid ? (pid === 'chamber' ? 0.34 : 0.22) : 0;
+        partMaterials[pid].forEach((mat) => {
+          mat.emissiveIntensity = THREE.MathUtils.lerp(
+            mat.emissiveIntensity,
+            targetIntensity,
+            0.14
+          );
+        });
+      });
+
       controls.update();
       renderer.render(scene, camera);
     };
@@ -808,7 +1193,12 @@ export function BottleStudio3D({
     return () => {
       cancelAnimationFrame(rafId);
       ro.disconnect();
+      renderer.domElement.removeEventListener('pointermove', onCanvasPointerMove);
+      renderer.domElement.removeEventListener('pointerleave', onCanvasPointerLeave);
+      renderer.domElement.removeEventListener('pointerdown', onCanvasPointerDown);
+      renderer.domElement.removeEventListener('pointerup', onCanvasPointerUp);
       controls.removeEventListener('start', onControlStart);
+      controls.removeEventListener('end', onControlEnd);
       controls.dispose();
       sceneApiRef.current = null;
       envTarget.dispose();
@@ -920,13 +1310,81 @@ export function BottleStudio3D({
           <div
             ref={mountRef}
             className="studio3d-canvas-host"
-            aria-label="Interactive 3D Waterholic bottle viewer — drag to orbit, scroll to zoom"
+            aria-label="Interactive 3D Waterholic bottle viewer — hover or tap bottle components to inspect engineering specs, drag to orbit"
           />
+
+          {/* Interactive 3D Component Engineering Spec Tooltip (GSAP Pop-In) */}
+          {activePartSpec && (
+            <div
+              ref={tooltipAnchorRef}
+              className={`studio3d-tooltip-anchor${
+                pinnedPart && !hoveredPart ? ' is-pinned' : ''
+              }`}
+              role="status"
+              aria-live="polite"
+            >
+              <div
+                ref={tooltipCardRef}
+                className="studio3d-tooltip-card"
+                style={{
+                  borderTopColor: activePartSpec.accent,
+                }}
+              >
+                <div className="studio3d-tooltip-head">
+                  <span
+                    className="studio3d-tooltip-code tabular-nums"
+                    style={{ color: activePartSpec.accent }}
+                  >
+                    <span
+                      className="studio3d-tooltip-dot"
+                      style={{ background: activePartSpec.accent }}
+                      aria-hidden="true"
+                    />
+                    {activePartSpec.code}
+                  </span>
+                  {pinnedPart && (
+                    <button
+                      type="button"
+                      className="studio3d-tooltip-close"
+                      aria-label="Dismiss component tooltip"
+                      onClick={() => setPinnedPart(null)}
+                    >
+                      <X size={13} aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+
+                <h3 className="studio3d-tooltip-title">
+                  {activePartSpec.title}
+                </h3>
+                <p className="studio3d-tooltip-summary">
+                  {activePartSpec.summary}
+                </p>
+
+                <div className="studio3d-tooltip-specs">
+                  {activePartSpec.specs.map((sp) => (
+                    <div key={sp.label} className="studio3d-tooltip-spec">
+                      <span className="studio3d-tooltip-spec-label">
+                        {sp.label}
+                      </span>
+                      <span className="studio3d-tooltip-spec-val tabular-nums">
+                        {sp.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Top-left crisp model readout (no backdrop-filter over WebGL) */}
           <div className="studio3d-badge-bar">
             <span className="studio3d-chip">
               {currentSpec.label} · {studioSize}
+            </span>
+            <span className="studio3d-inspect-hint">
+              <Info size={12} aria-hidden="true" />
+              <span>Hover or tap parts for specs</span>
             </span>
             <button
               type="button"
@@ -934,6 +1392,7 @@ export function BottleStudio3D({
               onClick={() => {
                 setExploded(0);
                 setAutoSpin(true);
+                setPinnedPart(null);
                 handleCameraPreset('hero');
               }}
               title="Reset 3D view"

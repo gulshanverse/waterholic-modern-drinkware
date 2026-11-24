@@ -77,6 +77,40 @@
   --shadow-tinted: 0 24px 64px rgba(2, 8, 16, 0.6);
 }
 
+/* Circadian Morning Palette (5:00 AM – 11:59 AM): Soft Sunlit Amber */
+:root[data-daypart='morning'] {
+  --bg: #fdf9f3;
+  --surface: #f7efe2;
+  --surface-elevated: #efe3cf;
+  --text-primary: #271b0e;
+  --text-secondary: #6e5438;
+  --border: rgba(39, 27, 14, 0.11);
+  --border-strong: rgba(39, 27, 14, 0.24);
+  --accent: #c26d18;
+  --accent-hover: #a6590e;
+  --accent-text: #fffcf7;
+  --glass-bg: rgba(253, 249, 243, 0.86);
+  --glass-border: rgba(194, 109, 24, 0.22);
+  --shadow-tinted: 0 22px 58px rgba(120, 68, 18, 0.12);
+}
+
+/* Circadian Evening Palette (6:00 PM – 4:59 AM): Deep Evening Indigo */
+:root[data-daypart='evening'] {
+  --bg: #090b1d;
+  --surface: #111530;
+  --surface-elevated: #191f44;
+  --text-primary: #eef1ff;
+  --text-secondary: #a1abd4;
+  --border: rgba(165, 180, 252, 0.14);
+  --border-strong: rgba(165, 180, 252, 0.28);
+  --accent: #818cf8;
+  --accent-hover: #a5b4fc;
+  --accent-text: #090b1d;
+  --glass-bg: rgba(9, 11, 29, 0.82);
+  --glass-border: rgba(129, 140, 248, 0.26);
+  --shadow-tinted: 0 24px 64px rgba(4, 5, 18, 0.68);
+}
+
 *,
 *::before,
 *::after {
@@ -225,6 +259,150 @@ a {
 
 [data-theme='light'] #theme-icon-sun {
   display: none;
+}
+
+/* Circadian Time-of-Day Theme Switcher Popover */
+.theme-switcher-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.theme-toggle.is-auto-synced {
+  border-color: var(--glass-border);
+}
+
+.theme-auto-pip {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--bg);
+}
+
+.circadian-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(272px, calc(100vw - 24px));
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-tinted);
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: circadianPopoverIn 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes circadianPopoverIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.circadian-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+.circadian-popover-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.circadian-popover-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.circadian-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.circadian-option:hover {
+  background: var(--surface);
+}
+
+.circadian-option.is-active {
+  background: var(--surface-elevated);
+  border-color: var(--glass-border);
+}
+
+.circadian-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  flex-shrink: 0;
+}
+
+.circadian-swatch--auto {
+  background: conic-gradient(
+    from 210deg,
+    #f59e0b 0deg 120deg,
+    #0284c7 120deg 240deg,
+    #4338ca 240deg 360deg
+  );
+}
+
+.circadian-option-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.circadian-option-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.circadian-option-sub {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.circadian-check {
+  color: var(--accent);
+  flex-shrink: 0;
 }
 
 .bag-count {
@@ -5346,6 +5524,135 @@ a {
   color: var(--text-primary);
 }
 
+.studio3d-inspect-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* Interactive 3D Component Inspection Tooltip (solid surface over WebGL, GSAP pop-in) */
+.studio3d-tooltip-anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 8;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.studio3d-tooltip-anchor.is-pinned {
+  pointer-events: auto;
+}
+
+.studio3d-tooltip-card {
+  width: min(284px, calc(100vw - 44px));
+  padding: 14px 16px;
+  border-radius: var(--radius-card);
+  background: var(--bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  border-top-width: 2.5px;
+  box-shadow: 0 18px 42px rgba(4, 18, 34, 0.24);
+  transform-origin: top left;
+  will-change: transform, opacity;
+}
+
+[data-theme='dark'] .studio3d-tooltip-card {
+  background: #0b1b2b;
+  border-color: rgba(148, 212, 245, 0.22);
+  box-shadow: 0 22px 50px rgba(2, 8, 16, 0.62);
+}
+
+.studio3d-tooltip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.studio3d-tooltip-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.studio3d-tooltip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.studio3d-tooltip-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.studio3d-tooltip-title {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+}
+
+.studio3d-tooltip-summary {
+  margin: 0 0 11px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.studio3d-tooltip-specs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.studio3d-tooltip-spec {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.studio3d-tooltip-spec-label {
+  font-size: 10.5px;
+  color: var(--text-secondary);
+}
+
+.studio3d-tooltip-spec-val {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
 .studio3d-mini-btn {
   display: inline-flex;
   align-items: center;
@@ -8074,6 +8381,15 @@ body {
     white-space: nowrap;
   }
 
+  .studio3d-inspect-hint {
+    display: none;
+  }
+
+  .studio3d-tooltip-close {
+    min-width: 36px;
+    min-height: 36px;
+  }
+
   .studio3d-mini-btn {
     min-width: 48px;
     min-height: 48px;
@@ -9060,6 +9376,14 @@ body {
   will-change: transform;
 }
 
+[data-daypart='morning'] .scroll-progress-bar {
+  background: linear-gradient(90deg, #b45309, #f59e0b 60%, #fbbf24);
+}
+
+[data-daypart='evening'] .scroll-progress-bar {
+  background: linear-gradient(90deg, #4f46e5, #818cf8 55%, #c084fc);
+}
+
 /* Slim Global Launch Announcement Bar (36px height — scroll-triggered reveal past Hero) */
 .launch-ribbon {
   position: fixed;
@@ -9099,6 +9423,38 @@ body {
   background: #061422;
   color: #e6f4fc;
   border-bottom: 1px solid rgba(148, 212, 245, 0.14);
+}
+
+[data-daypart='morning'] .launch-ribbon {
+  background: #2b1d0f;
+  color: #fdf6ec;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.22);
+}
+
+[data-daypart='morning'] .launch-ribbon-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.8);
+}
+
+[data-daypart='evening'] .launch-ribbon {
+  background: #0c0f28;
+  color: #eef1ff;
+  border-bottom: 1px solid rgba(129, 140, 248, 0.22);
+}
+
+[data-daypart='evening'] .launch-ribbon-dot {
+  background: #818cf8;
+  box-shadow: 0 0 8px rgba(129, 140, 248, 0.85);
+}
+
+[data-daypart='evening'] .press-editorial-card,
+[data-daypart='evening'] .guarantee-item {
+  background: rgba(17, 21, 48, 0.86);
+}
+
+[data-daypart='evening'] .studio3d-tooltip-card {
+  background: #111530;
+  border-color: rgba(165, 180, 252, 0.26);
 }
 
 .launch-ribbon-inner {
@@ -10551,6 +10907,420 @@ body {
 
   .press-logos-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ==========================================================================
+   ProfileDrawer — Milestone Badges & Dynamic Animated SVG Medals
+   ========================================================================== */
+.milestones-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.milestones-head {
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.milestones-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.milestones-head-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.milestones-count-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.milestones-telemetry-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.milestones-telemetry-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.milestones-telemetry-chip svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.milestone-unlock-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 44%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 16%, var(--surface)) 0%,
+    color-mix(in srgb, var(--accent) 7%, var(--bg)) 100%
+  );
+  color: var(--text-primary);
+  font-size: 12.5px;
+  line-height: 1.35;
+  animation: milestoneBannerEnter 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.milestone-unlock-banner-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.milestone-unlock-banner-copy svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.milestone-banner-dismiss {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.milestone-banner-dismiss:hover {
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+
+.milestone-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.milestone-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 10px 6px 9px;
+  min-height: 108px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: center;
+  transition:
+    transform 180ms var(--ease-out),
+    border-color 180ms var(--ease-out),
+    box-shadow 220ms var(--ease-out),
+    background-color 180ms var(--ease-out);
+}
+
+.milestone-tile:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 46%, var(--border));
+}
+
+.milestone-tile.is-unlocked {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 7%, var(--surface)) 0%,
+    var(--bg) 100%
+  );
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+
+.milestone-tile.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.milestone-tile.is-just-unlocked {
+  animation: medalUnlockBurst 780ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.milestone-medal-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+}
+
+.medal-svg {
+  display: block;
+  overflow: visible;
+}
+
+.medal-svg.is-unlocked {
+  filter: drop-shadow(0 6px 12px rgba(2, 132, 199, 0.22));
+}
+
+[data-daypart='morning'] .medal-svg.is-unlocked {
+  filter: drop-shadow(0 6px 12px rgba(194, 109, 24, 0.24));
+}
+
+[data-daypart='evening'] .medal-svg.is-unlocked {
+  filter: drop-shadow(0 6px 14px rgba(129, 140, 248, 0.34));
+}
+
+.milestone-lock-pin {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--text-secondary);
+  display: grid;
+  place-items: center;
+}
+
+.milestone-tile-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+.milestone-tile.is-locked .milestone-tile-title {
+  color: var(--text-secondary);
+}
+
+.milestone-tile-status {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--accent);
+}
+
+.milestone-tile.is-locked .milestone-tile-status {
+  color: var(--text-secondary);
+}
+
+/* Inline Selected Medal Precision Inspector */
+.milestone-inspector {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+  background: var(--bg);
+}
+
+.milestone-inspector-medal {
+  display: grid;
+  place-items: center;
+}
+
+.milestone-inspector-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.milestone-inspector-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.milestone-tier-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.milestone-earned-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.milestone-pending-pill {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.milestone-inspector-title {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.25;
+}
+
+.milestone-inspector-desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.milestone-progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 3px;
+}
+
+.milestone-progress-bar {
+  height: 6px;
+  width: 100%;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--text-primary) 10%, transparent);
+  overflow: hidden;
+}
+
+.milestone-progress-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  transition: width 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.milestone-progress-fill.is-complete {
+  background: linear-gradient(90deg, var(--accent), #38bdf8);
+}
+
+.milestone-progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.milestone-boost-btn {
+  margin-top: 4px;
+  align-self: flex-start;
+  min-height: 36px;
+  padding: 7px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 160ms var(--ease-out), color 160ms var(--ease-out);
+}
+
+.milestone-boost-btn:hover {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+@keyframes medalUnlockBurst {
+  0% {
+    transform: scale(0.84);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  45% {
+    transform: scale(1.06);
+    box-shadow: 0 0 0 12px color-mix(in srgb, var(--accent) 0%, transparent);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@keyframes milestoneBannerEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 520px) {
+  .milestone-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .milestone-inspector {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .milestone-inspector-top,
+  .milestone-progress-meta {
+    justify-content: center;
+  }
+
+  .milestone-boost-btn {
+    align-self: center;
+    min-height: 48px;
+    padding: 10px 16px;
+  }
+
+  .milestone-banner-dismiss {
+    width: 44px;
+    height: 44px;
   }
 }
 
