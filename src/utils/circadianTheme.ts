@@ -9,6 +9,8 @@ export interface DaypartMeta {
   theme: 'light' | 'dark';
   swatchPrimary: string;
   swatchSurface: string;
+  soundscapeName: string;
+  soundscapeSubtitle: string;
 }
 
 export const DAYPART_META: Record<Daypart, DaypartMeta> = {
@@ -20,6 +22,8 @@ export const DAYPART_META: Record<Daypart, DaypartMeta> = {
     theme: 'light',
     swatchPrimary: '#c26d18',
     swatchSurface: '#fdf9f3',
+    soundscapeName: 'Soft Morning Birds',
+    soundscapeSubtitle: 'Dawn songbirds & warm breeze loop',
   },
   day: {
     id: 'day',
@@ -29,6 +33,8 @@ export const DAYPART_META: Record<Daypart, DaypartMeta> = {
     theme: 'light',
     swatchPrimary: '#0284c7',
     swatchSurface: '#f5fafd',
+    soundscapeName: 'Alpine Breeze',
+    soundscapeSubtitle: 'Whisper-quiet glacial air & stream',
   },
   evening: {
     id: 'evening',
@@ -38,6 +44,8 @@ export const DAYPART_META: Record<Daypart, DaypartMeta> = {
     theme: 'dark',
     swatchPrimary: '#818cf8',
     swatchSurface: '#090b1d',
+    soundscapeName: 'Gentle Crickets',
+    soundscapeSubtitle: 'Twilight meadow chorus & night air',
   },
 };
 

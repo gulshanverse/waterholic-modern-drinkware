@@ -61,8 +61,11 @@ import {
   Sparkles,
   Sun,
   Sunrise,
+  Volume2,
+  VolumeX,
   X,
 } from 'lucide-react';
+import { AtmosphericSoundscapeEngine } from './utils/atmosphericSoundscape';
 import bottleStudioLogoImg from './assets/images/waterholic_studio_logo_bottle_1795462018573.jpg';
 import bottleRiverLogoImg from './assets/images/waterholic_river_logo_bottle_1795462051322.jpg';
 import bottleOutdoorLogoImg from './assets/images/waterholic_outdoor_logo_bottle_1795462017951.jpg';
@@ -264,6 +267,22 @@ export default function App() {
   const activeDaypart: Daypart = resolveDaypart(themeMode, clockNow);
   const theme: 'dark' | 'light' = DAYPART_META[activeDaypart].theme;
   const liveClockDaypart: Daypart = getDaypartForDate(clockNow);
+
+  // Subtle circadian atmospheric soundscape (Soft Morning Birds / Alpine Breeze / Gentle Evening Crickets)
+  const [soundscapeEnabled, setSoundscapeEnabled] = useState<boolean>(() =>
+    readStored<{ enabled: boolean; volume: number }>('wh_soundscape_v1', {
+      enabled: true,
+      volume: 0.38,
+    }).enabled
+  );
+  const [soundscapeVolume, setSoundscapeVolume] = useState<number>(() =>
+    readStored<{ enabled: boolean; volume: number }>('wh_soundscape_v1', {
+      enabled: true,
+      volume: 0.38,
+    }).volume
+  );
+  const [soundscapePlaying, setSoundscapePlaying] = useState<boolean>(false);
+  const soundscapeEngineRef = useRef<AtmosphericSoundscapeEngine | null>(null);
   const [finish, setFinish] = useState<FinishId>('blue');
   const [size, setSize] = useState<SizeLabel>('950 ml');
   const [price, setPrice] = useState<number>(48);
@@ -467,6 +486,86 @@ export default function App() {
     writeStored('wh_theme_mode_v2', themeMode);
     writeStored('wh_theme_v1', theme);
   }, [theme, activeDaypart, themeMode]);
+
+  // Persist atmospheric soundscape preferences
+  useEffect(() => {
+    writeStored('wh_soundscape_v1', {
+      enabled: soundscapeEnabled,
+      volume: soundscapeVolume,
+    });
+  }, [soundscapeEnabled, soundscapeVolume]);
+
+  // Lifecycle for procedural Web Audio atmospheric soundscape engine
+  useEffect(() => {
+    const engine = new AtmosphericSoundscapeEngine((unlocked) => {
+      setSoundscapePlaying(unlocked);
+    });
+    soundscapeEngineRef.current = engine;
+
+    const handleVisibility = () => {
+      engine.setState({
+        daypart: resolveDaypart(
+          readStored<ThemeMode>('wh_theme_mode_v2', 'auto'),
+          new Date()
+        ),
+        enabled: readStored<{ enabled: boolean; volume: number }>(
+          'wh_soundscape_v1',
+          { enabled: true, volume: 0.38 }
+        ).enabled,
+        volume: readStored<{ enabled: boolean; volume: number }>(
+          'wh_soundscape_v1',
+          { enabled: true, volume: 0.38 }
+        ).volume,
+        tabHidden: document.visibilityState === 'hidden',
+      });
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      engine.dispose();
+      soundscapeEngineRef.current = null;
+    };
+  }, []);
+
+  // Sync active theme, enabled flag, and volume into soundscape crossfader
+  useEffect(() => {
+    const engine = soundscapeEngineRef.current;
+    if (!engine) return;
+    engine.setState({
+      daypart: activeDaypart,
+      enabled: soundscapeEnabled,
+      volume: soundscapeVolume,
+      tabHidden: document.visibilityState === 'hidden',
+    });
+    if (!soundscapeEnabled) {
+      setSoundscapePlaying(false);
+    } else if (engine.isUnlocked()) {
+      setSoundscapePlaying(true);
+    }
+  }, [activeDaypart, soundscapeEnabled, soundscapeVolume]);
+
+  // Auto-fade in on first user gesture when soundscape is enabled (respects browser autoplay rules)
+  useEffect(() => {
+    if (!soundscapeEnabled || soundscapePlaying) return;
+    const unlockOnGesture = () => {
+      const engine = soundscapeEngineRef.current;
+      if (!engine) return;
+      engine.setState({
+        daypart: activeDaypart,
+        enabled: true,
+        volume: soundscapeVolume,
+        tabHidden: document.visibilityState === 'hidden',
+      });
+      void engine.unlockAndSync();
+    };
+    window.addEventListener('pointerdown', unlockOnGesture, { once: true });
+    window.addEventListener('keydown', unlockOnGesture, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlockOnGesture);
+      window.removeEventListener('keydown', unlockOnGesture);
+    };
+  }, [soundscapeEnabled, soundscapePlaying, activeDaypart, soundscapeVolume]);
 
   const showLaunchRibbon = announcementVisible && launchRibbonRevealed;
 
@@ -1740,6 +1839,60 @@ export default function App() {
               </svg>
             </button>
 
+            <button
+              type="button"
+              className={`icon-btn soundscape-toggle${
+                soundscapeEnabled ? ' is-enabled' : ''
+              }${soundscapeEnabled && soundscapePlaying ? ' is-playing' : ''}`}
+              id="soundscape-toggle"
+              aria-pressed={soundscapeEnabled}
+              aria-label={
+                soundscapeEnabled
+                  ? `Mute atmospheric soundscape (${DAYPART_META[activeDaypart].soundscapeName})`
+                  : `Enable atmospheric soundscape (${DAYPART_META[activeDaypart].soundscapeName})`
+              }
+              title={
+                soundscapeEnabled
+                  ? `Atmospheric soundscape: ${DAYPART_META[activeDaypart].soundscapeName} (click to mute)`
+                  : `Enable atmospheric soundscape (${DAYPART_META[activeDaypart].soundscapeName})`
+              }
+              onClick={() => {
+                const next = !soundscapeEnabled;
+                setSoundscapeEnabled(next);
+                const engine = soundscapeEngineRef.current;
+                if (engine) {
+                  engine.setState({
+                    daypart: activeDaypart,
+                    enabled: next,
+                    volume: soundscapeVolume,
+                    tabHidden: false,
+                  });
+                  if (next) {
+                    void engine.unlockAndSync();
+                  }
+                }
+                showToast(
+                  next
+                    ? `Atmospheric soundscape on — ${DAYPART_META[activeDaypart].soundscapeName}`
+                    : 'Atmospheric soundscape muted'
+                );
+              }}
+            >
+              {soundscapeEnabled ? (
+                soundscapePlaying ? (
+                  <span className="soundscape-eq" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                ) : (
+                  <Volume2 size={18} strokeWidth={2} aria-hidden="true" />
+                )
+              ) : (
+                <VolumeX size={18} strokeWidth={2} aria-hidden="true" />
+              )}
+            </button>
+
             <div className="theme-switcher-wrap" ref={themeMenuRef}>
               <button
                 type="button"
@@ -1834,8 +1987,19 @@ export default function App() {
                         onClick={() => {
                           setThemeMode(dp);
                           setThemeMenuOpen(false);
+                          if (soundscapeEnabled && soundscapeEngineRef.current) {
+                            soundscapeEngineRef.current.setState({
+                              daypart: dp,
+                              enabled: true,
+                              volume: soundscapeVolume,
+                              tabHidden: false,
+                            });
+                            void soundscapeEngineRef.current.unlockAndSync();
+                          }
                           showToast(
-                            `Switched to ${meta.label} · ${meta.paletteName} palette`
+                            soundscapeEnabled
+                              ? `${meta.label} · ${meta.paletteName} (${meta.soundscapeName})`
+                              : `Switched to ${meta.label} · ${meta.paletteName} palette`
                           );
                         }}
                       >
@@ -1864,6 +2028,74 @@ export default function App() {
                       </button>
                     );
                   })}
+
+                  <div className="circadian-soundscape-box">
+                    <div className="circadian-soundscape-head">
+                      <div className="circadian-soundscape-copy">
+                        <span className="circadian-soundscape-eyebrow">
+                          Atmospheric Soundscape
+                        </span>
+                        <span className="circadian-soundscape-track">
+                          {DAYPART_META[activeDaypart].soundscapeName}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className={`circadian-sound-pill${
+                          soundscapeEnabled ? ' is-on' : ''
+                        }`}
+                        aria-pressed={soundscapeEnabled}
+                        onClick={() => {
+                          const next = !soundscapeEnabled;
+                          setSoundscapeEnabled(next);
+                          const engine = soundscapeEngineRef.current;
+                          if (engine) {
+                            engine.setState({
+                              daypart: activeDaypart,
+                              enabled: next,
+                              volume: soundscapeVolume,
+                              tabHidden: false,
+                            });
+                            if (next) void engine.unlockAndSync();
+                          }
+                        }}
+                      >
+                        {soundscapeEnabled ? 'On' : 'Off'}
+                      </button>
+                    </div>
+                    <p className="circadian-soundscape-sub">
+                      {DAYPART_META[activeDaypart].soundscapeSubtitle}
+                    </p>
+                    <label className="circadian-volume-row">
+                      <span className="circadian-volume-label">Level</span>
+                      <input
+                        type="range"
+                        min={10}
+                        max={100}
+                        step={2}
+                        value={Math.round(soundscapeVolume * 100)}
+                        disabled={!soundscapeEnabled}
+                        aria-label="Atmospheric soundscape volume"
+                        className="circadian-volume-slider"
+                        onChange={(e) => {
+                          const nextVol = Number(e.target.value) / 100;
+                          setSoundscapeVolume(nextVol);
+                          if (soundscapeEnabled && soundscapeEngineRef.current) {
+                            soundscapeEngineRef.current.setState({
+                              daypart: activeDaypart,
+                              enabled: true,
+                              volume: nextVol,
+                              tabHidden: false,
+                            });
+                            void soundscapeEngineRef.current.unlockAndSync();
+                          }
+                        }}
+                      />
+                      <span className="circadian-volume-val tabular-nums">
+                        {Math.round(soundscapeVolume * 100)}%
+                      </span>
+                    </label>
+                  </div>
                 </div>
               )}
             </div>
