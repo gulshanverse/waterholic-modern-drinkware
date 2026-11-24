@@ -31,8 +31,26 @@ import {
 } from './components/BottleStudio3D';
 import { CreativeStudioSection } from './components/CreativeStudioSection';
 import { AiConciergeDrawer } from './components/AiConciergeDrawer';
+import {
+  CraftsmanshipAndImpactLedger,
+  CuratedRitualBundles,
+  PressAndGuaranteeStrip,
+} from './components/LaunchExperienceSection';
+import { BottleFinderModal } from './components/BottleFinderModal';
+import { FastFlowPriceWave } from './components/FastFlowPriceWave';
 import { useAuth } from './contexts/AuthContext';
-import { ChevronLeft, ChevronRight, Menu, Sparkles, X } from 'lucide-react';
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Compass,
+  Copy,
+  Heart,
+  Menu,
+  PenTool,
+  Sparkles,
+  X,
+} from 'lucide-react';
 import bottleStudioLogoImg from './assets/images/waterholic_studio_logo_bottle_1795462018573.jpg';
 import bottleRiverLogoImg from './assets/images/waterholic_river_logo_bottle_1795462051322.jpg';
 import bottleOutdoorLogoImg from './assets/images/waterholic_outdoor_logo_bottle_1795462017951.jpg';
@@ -298,6 +316,22 @@ export default function App() {
   const [compareModalOpen, setCompareModalOpen] = useState<boolean>(false);
   const [conciergeOpen, setConciergeOpen] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+  const [finderOpen, setFinderOpen] = useState<boolean>(false);
+  const [announcementVisible, setAnnouncementVisible] = useState<boolean>(true);
+  const [launchRibbonRevealed, setLaunchRibbonRevealed] =
+    useState<boolean>(false);
+  const [promoCopied, setPromoCopied] = useState<boolean>(false);
+  const [engravingEnabled, setEngravingEnabled] = useState<boolean>(true);
+  const [engravingText, setEngravingText] = useState<string>('ALEX');
+  const [engravingFont, setEngravingFont] = useState<'sans' | 'serif' | 'mono'>(
+    'serif'
+  );
+  const [engravingOrientation, setEngravingOrientation] = useState<
+    'vertical' | 'horizontal'
+  >('vertical');
+  const [fastFlowSignal, setFastFlowSignal] = useState<number>(0);
+  const [fastFlowSurging, setFastFlowSurging] = useState<boolean>(false);
+  const fastFlowTimerRef = useRef<number | null>(null);
 
   const {
     user,
@@ -308,6 +342,8 @@ export default function App() {
     saveOrderToCloud,
   } = useAuth();
   const cloudHydratedUidRef = useRef<string | null>(null);
+  const scrollProgressRef = useRef<HTMLDivElement | null>(null);
+  const heroSectionRef = useRef<HTMLElement | null>(null);
 
   const heroCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const specsCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -355,6 +391,78 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', theme);
     writeStored('wh_theme_v1', theme);
   }, [theme]);
+
+  const showLaunchRibbon = announcementVisible && launchRibbonRevealed;
+
+  useEffect(() => {
+    const heroEl = heroSectionRef.current;
+    if (!heroEl) return;
+
+    const evaluateHeroPast = () => {
+      const rect = heroEl.getBoundingClientRect();
+      setLaunchRibbonRevealed(rect.bottom <= 96);
+    };
+
+    evaluateHeroPast();
+
+    if (typeof IntersectionObserver !== 'undefined') {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          if (!entry) return;
+          const pastHero =
+            !entry.isIntersecting && entry.boundingClientRect.bottom <= 96;
+          setLaunchRibbonRevealed(pastHero);
+        },
+        {
+          root: null,
+          rootMargin: '-96px 0px 0px 0px',
+          threshold: 0,
+        }
+      );
+      observer.observe(heroEl);
+      return () => observer.disconnect();
+    }
+
+    window.addEventListener('scroll', evaluateHeroPast, { passive: true });
+    return () => window.removeEventListener('scroll', evaluateHeroPast);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      '--announcement-h',
+      showLaunchRibbon ? '36px' : '0px'
+    );
+    return () => {
+      document.documentElement.style.setProperty('--announcement-h', '0px');
+    };
+  }, [showLaunchRibbon]);
+
+  useEffect(() => {
+    let rafId = 0;
+    const updateProgress = () => {
+      rafId = 0;
+      const el = scrollProgressRef.current;
+      if (!el) return;
+      const maxScroll = Math.max(
+        1,
+        document.documentElement.scrollHeight - window.innerHeight
+      );
+      const ratio = Math.min(1, Math.max(0, window.scrollY / maxScroll));
+      el.style.transform = `scaleX(${ratio})`;
+    };
+    const onScroll = () => {
+      if (!rafId) rafId = window.requestAnimationFrame(updateProgress);
+    };
+    updateProgress();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    return () => {
+      if (rafId) window.cancelAnimationFrame(rafId);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, []);
 
   useEffect(() => {
     writeStored('wh_bag_v1', bag);
@@ -938,9 +1046,29 @@ export default function App() {
     isDraggingRef.current = false;
   };
 
+  const triggerFastFlowPulse = useCallback(() => {
+    setFastFlowSignal((n) => n + 1);
+    setFastFlowSurging(true);
+    if (fastFlowTimerRef.current !== null) {
+      window.clearTimeout(fastFlowTimerRef.current);
+    }
+    fastFlowTimerRef.current = window.setTimeout(() => {
+      setFastFlowSurging(false);
+    }, 950);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (fastFlowTimerRef.current !== null) {
+        window.clearTimeout(fastFlowTimerRef.current);
+      }
+    };
+  }, []);
+
   const selectFinish = (nextFinish: FinishId) => {
     selectedConfigRef.current.finish = nextFinish;
     setFinish(nextFinish);
+    triggerFastFlowPulse();
   };
 
   const selectSize = (nextSize: SizeLabel, nextPrice: number) => {
@@ -948,6 +1076,7 @@ export default function App() {
     selectedConfigRef.current.price = nextPrice;
     setSize(nextSize);
     setPrice(nextPrice);
+    triggerFastFlowPulse();
   };
 
   const handleAddCatalogProduct = useCallback(
@@ -983,12 +1112,38 @@ export default function App() {
     [showToast]
   );
 
+  const handleCopyLaunchCode = useCallback(() => {
+    const code = 'WATER10';
+    if (navigator.clipboard?.writeText) {
+      void navigator.clipboard.writeText(code).catch(() => {});
+    }
+    setPromoCopied(true);
+    showToast('Copied code WATER10 — apply in your bag for 10% off');
+    window.setTimeout(() => setPromoCopied(false), 2400);
+  }, [showToast]);
+
   const addFlagshipToBag = () => {
     const activeCfg = selectedConfigRef.current;
     const finishMeta = FINISH_META[activeCfg.finish];
     const isPinkPremium = activeCfg.finish === 'pink';
     const finalPrice = activeCfg.price + (finishMeta.premiumDelta ?? 0);
-    const key = `${isPinkPremium ? 'wh-001' : 'wh-002'}__${activeCfg.finish}__${activeCfg.size}`;
+    const cleanedMonogram = engravingEnabled
+      ? engravingText.trim().slice(0, 12)
+      : '';
+    const fontTag =
+      engravingFont === 'serif'
+        ? 'Serif'
+        : engravingFont === 'mono'
+          ? 'Mono'
+          : 'Sans';
+    const engravingSuffix = cleanedMonogram
+      ? ` · Engraved "${cleanedMonogram}" (${fontTag})`
+      : '';
+    const key = `${isPinkPremium ? 'wh-001' : 'wh-002'}__${activeCfg.finish}__${activeCfg.size}${
+      cleanedMonogram
+        ? `__eng_${cleanedMonogram.toLowerCase()}_${engravingFont}_${engravingOrientation}`
+        : ''
+    }`;
     const roseProduct = PRODUCTS[0];
     setBag((prev) => {
       const idx = prev.findIndex((item) => item.key === key);
@@ -1010,13 +1165,16 @@ export default function App() {
           finishHex: finishMeta.dot,
           finishIsTransparent: finishMeta.isTransparent,
           finishFilter: isPinkPremium ? undefined : finishMeta.filter,
-          sizeLabel: activeCfg.size,
+          sizeLabel: `${activeCfg.size}${engravingSuffix}`,
           price: finalPrice,
           qty: 1,
           image: isPinkPremium ? roseProduct.image : bottleStudioLogoImg,
         },
       ];
     });
+    if (cleanedMonogram) {
+      showToast(`Added custom laser-engraved "${cleanedMonogram}" flask to bag`);
+    }
     setDrawerOpen(true);
   };
 
@@ -1291,10 +1449,89 @@ export default function App() {
   const totalQty = bag.reduce((sum, item) => sum + item.qty, 0);
   const activeScale =
     SIZE_OPTIONS.find((s) => s.size === size)?.scale ?? 1.0;
+  const heroFlagshipId = finish === 'pink' ? PRODUCTS[0].id : 'wh-002';
+  const heroFlagshipName =
+    finish === 'pink'
+      ? 'Waterholic Rose Quartz Premium Bottle'
+      : 'Waterholic Flagship Flask';
+  const isHeroFlagshipSaved = savedIds.has(heroFlagshipId);
+
+  const handleToggleHeroWishlist = () => {
+    const nextSaved = !isHeroFlagshipSaved;
+    toggleSaveProduct(heroFlagshipId);
+    showToast(
+      nextSaved
+        ? `Saved ${heroFlagshipName} to your wishlist`
+        : `Removed ${heroFlagshipName} from wishlist`
+    );
+  };
 
   return (
     <>
+      <div className="scroll-progress-track" aria-hidden="true">
+        <div ref={scrollProgressRef} className="scroll-progress-bar" />
+      </div>
+
       <div className="grain-overlay" aria-hidden="true" />
+
+      {announcementVisible && (
+        <div
+          className={`launch-ribbon${showLaunchRibbon ? ' is-revealed' : ''}`}
+          role="region"
+          aria-label="Global Launch Announcement"
+          aria-hidden={!showLaunchRibbon}
+        >
+          <div className="container launch-ribbon-inner">
+            <div className="launch-ribbon-copy">
+              <span className="launch-ribbon-dot" aria-hidden="true" />
+              <span className="launch-ribbon-text">
+                <strong>Global Launch Edition</strong> · Free Laser Monogramming
+                &amp; Express Shipping $60+
+              </span>
+              <button
+                type="button"
+                className="launch-ribbon-code-btn"
+                onClick={handleCopyLaunchCode}
+                aria-label="Copy 10% launch promo code WATER10"
+                tabIndex={showLaunchRibbon ? 0 : -1}
+              >
+                {promoCopied ? (
+                  <>
+                    <Check size={12} aria-hidden="true" />
+                    <span>Copied WATER10</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={12} aria-hidden="true" />
+                    <span>10% Off: WATER10</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="launch-ribbon-right">
+              <button
+                type="button"
+                className="launch-ribbon-finder-btn"
+                onClick={() => setFinderOpen(true)}
+                tabIndex={showLaunchRibbon ? 0 : -1}
+              >
+                <Compass size={13} aria-hidden="true" />
+                <span>30s Vessel Finder</span>
+              </button>
+              <button
+                type="button"
+                className="launch-ribbon-dismiss"
+                aria-label="Dismiss launch announcement"
+                onClick={() => setAnnouncementVisible(false)}
+                tabIndex={showLaunchRibbon ? 0 : -1}
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <header className="site-header" id="site-header">
         <div className="container header-inner">
@@ -1543,11 +1780,27 @@ export default function App() {
             <span aria-hidden="true">→</span>
           </a>
           <a
+            href="#bundles"
+            className="mobile-nav-link"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <span>Curated Ritual Sets (Save $26)</span>
+            <span aria-hidden="true">→</span>
+          </a>
+          <a
+            href="#impact"
+            className="mobile-nav-link"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <span>Materials Lab &amp; Impact Ledger</span>
+            <span aria-hidden="true">→</span>
+          </a>
+          <a
             href="#order"
             className="mobile-nav-link"
             onClick={() => setMobileMenuOpen(false)}
           >
-            <span>Flagship Configurator</span>
+            <span>Bespoke Laser Engraving Studio</span>
             <span aria-hidden="true">→</span>
           </a>
           <a
@@ -1564,6 +1817,17 @@ export default function App() {
           <button
             type="button"
             className="btn btn-primary btn-full"
+            onClick={() => {
+              setMobileMenuOpen(false);
+              setFinderOpen(true);
+            }}
+          >
+            <Compass size={16} aria-hidden="true" />
+            <span>Take 30s Vessel Finder</span>
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost btn-full"
             onClick={() => {
               setMobileMenuOpen(false);
               setConciergeOpen(true);
@@ -1599,7 +1863,7 @@ export default function App() {
 
       <main>
         {/* SECTION 1: Asymmetric Split Hero */}
-        <section id="hero" className="hero">
+        <section id="hero" ref={heroSectionRef} className="hero">
           <canvas
             ref={heroCanvasRef}
             id="hero-gl-canvas"
@@ -1618,9 +1882,37 @@ export default function App() {
               </p>
 
               <div className="hero-actions">
-                <a href="#catalog" className="btn btn-primary magnetic-btn">
-                  Browse {PRODUCTS.length} Products
-                </a>
+                <div className="hero-primary-cluster">
+                  <a href="#catalog" className="btn btn-primary magnetic-btn">
+                    Browse {PRODUCTS.length} Products
+                  </a>
+                  <button
+                    type="button"
+                    className={`hero-wishlist-btn${
+                      isHeroFlagshipSaved ? ' is-saved' : ''
+                    }`}
+                    aria-pressed={isHeroFlagshipSaved}
+                    aria-label={
+                      isHeroFlagshipSaved
+                        ? `Remove ${heroFlagshipName} from wishlist`
+                        : `Save ${heroFlagshipName} to wishlist`
+                    }
+                    title={
+                      isHeroFlagshipSaved
+                        ? `Saved in Wishlist — ${heroFlagshipName}`
+                        : `Bookmark ${heroFlagshipName}`
+                    }
+                    data-testid="hero-wishlist-btn"
+                    onClick={handleToggleHeroWishlist}
+                  >
+                    <Heart
+                      size={20}
+                      strokeWidth={2}
+                      fill={isHeroFlagshipSaved ? 'currentColor' : 'none'}
+                      aria-hidden="true"
+                    />
+                  </button>
+                </div>
                 <a href="#campus" className="btn btn-ghost">
                   For College Students
                   <svg
@@ -1714,6 +2006,9 @@ export default function App() {
           </div>
         </section>
 
+        {/* SECTION 1.5: Global Editorial Press Recognition & Brand Guarantee Strip */}
+        <PressAndGuaranteeStrip onOpenFinder={() => setFinderOpen(true)} />
+
         {/* SECTION 2: Full 106-Product Interactive Water Storefront */}
         <div ref={catalogHostRef}>
           <CatalogSection
@@ -1744,6 +2039,14 @@ export default function App() {
           onQuickViewProduct={handleOpenQuickView}
           onAddBundleToBag={handleAddBundleToBag}
           onLogWater={handleLogWater}
+          onShowToast={showToast}
+        />
+
+        {/* SECTION 2.6: Curated Launch Ritual Sets */}
+        <CuratedRitualBundles
+          onQuickViewProduct={handleOpenQuickView}
+          onAddProductToBag={handleAddCatalogProduct}
+          onOpenFinder={() => setFinderOpen(true)}
           onShowToast={showToast}
         />
 
@@ -2113,7 +2416,10 @@ export default function App() {
           </div>
         </section>
 
-        {/* SECTION 6: Flagship Finish & Size Configurator + Order */}
+        {/* SECTION 5.5: Materials Lab Metallurgy & Interactive Plastic Impact Ledger */}
+        <CraftsmanshipAndImpactLedger />
+
+        {/* SECTION 6: Flagship Finish, Capacity & Bespoke Laser Engraving Studio */}
         <section id="order" className="order-section">
           <div className="container order-grid">
             <div className="order-preview" id="order-preview">
@@ -2132,21 +2438,82 @@ export default function App() {
                   height={940}
                 />
                 <BottleBrandMark finish={finish} variant="order" />
+                {engravingEnabled && engravingText.trim().length > 0 && (
+                  <div
+                    className={`bottle-engraving-overlay bottle-engraving--${engravingOrientation} bottle-engraving--${engravingFont}${
+                      finish === 'glacier' || finish === 'transparent'
+                        ? ' is-dark-ink'
+                        : ''
+                    }`}
+                    aria-label={`Live laser engraving preview: ${engravingText.trim()}`}
+                  >
+                    <span>{engravingText.trim()}</span>
+                  </div>
+                )}
+              </div>
+              <div className="order-preview-caption tabular-nums">
+                <span>{FINISH_META[finish].name}</span>
+                <span aria-hidden="true">·</span>
+                <span>{size}</span>
+                {engravingEnabled && engravingText.trim().length > 0 && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span>Laser Etched &ldquo;{engravingText.trim()}&rdquo;</span>
+                  </>
+                )}
               </div>
             </div>
 
             <div className="order-panel">
+              <span className="launch-eyebrow">
+                Bespoke Atelier Configurator
+              </span>
               <h2 className="section-title">
                 {finish === 'pink'
                   ? 'Waterholic Rose Quartz Premium'
                   : 'Waterholic Flagship Flask'}
               </h2>
-              <p className="order-price tabular-nums" id="order-price">
-                ${price + (FINISH_META[finish].premiumDelta ?? 0)}
-                {finish === 'pink' && (
-                  <span className="order-premium-note"> · Premium Pink Edition</span>
-                )}
-              </p>
+              <div
+                className={`order-price-wave-stage${
+                  fastFlowSurging ? ' is-surging' : ''
+                }`}
+                onPointerEnter={triggerFastFlowPulse}
+              >
+                <FastFlowPriceWave
+                  accentHex={
+                    finish === 'pink'
+                      ? '#e495a6'
+                      : finish === 'sage'
+                        ? '#48634b'
+                        : finish === 'glacier' || finish === 'transparent'
+                          ? '#38bdf8'
+                          : '#0284c7'
+                  }
+                  interactionSignal={fastFlowSignal}
+                  sizeLabel={size}
+                />
+                <div className="order-price-foreground">
+                  <p className="order-price tabular-nums" id="order-price">
+                    ${price + (FINISH_META[finish].premiumDelta ?? 0)}
+                    {finish === 'pink' && (
+                      <span className="order-premium-note">
+                        {' '}
+                        · Premium Pink Edition
+                      </span>
+                    )}
+                  </p>
+                  <span
+                    className="order-price-fastflow-tag tabular-nums"
+                    title="Fast-Flow dual-vent chug spout engineered for 42 ml/s laminar hydration"
+                  >
+                    <span
+                      className="order-price-fastflow-dot"
+                      aria-hidden="true"
+                    />
+                    Fast-Flow · 42 ml/s
+                  </span>
+                </div>
+              </div>
 
               <div className="config-group">
                 <span className="config-label">Colour (6 Options)</span>
@@ -2197,6 +2564,131 @@ export default function App() {
                 </div>
               </div>
 
+              {/* Bespoke Laser Monogram Studio */}
+              <div className="engraving-studio-card">
+                <div className="engraving-studio-head">
+                  <div className="engraving-studio-title-wrap">
+                    <PenTool size={15} aria-hidden="true" />
+                    <span className="engraving-studio-title">
+                      Bespoke Laser Engraving
+                    </span>
+                    <span className="engraving-free-tag">
+                      Complimentary Launch Gift
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={engravingEnabled}
+                    className={`engraving-switch${
+                      engravingEnabled ? ' is-on' : ''
+                    }`}
+                    onClick={() => {
+                      setEngravingEnabled((prev) => !prev);
+                      triggerFastFlowPulse();
+                    }}
+                  >
+                    <span className="engraving-switch-thumb" />
+                    <span className="sr-only">Toggle custom laser engraving</span>
+                  </button>
+                </div>
+
+                {engravingEnabled && (
+                  <div className="engraving-controls">
+                    <div className="engraving-input-row">
+                      <input
+                        type="text"
+                        maxLength={12}
+                        value={engravingText}
+                        onChange={(e) => {
+                          setEngravingText(e.target.value);
+                          triggerFastFlowPulse();
+                        }}
+                        placeholder="Enter initials or name (max 12)"
+                        aria-label="Custom laser engraving monogram"
+                        className="engraving-text-input"
+                      />
+                      <span className="engraving-char-count tabular-nums">
+                        {engravingText.length}/12
+                      </span>
+                    </div>
+
+                    <div className="engraving-presets-row">
+                      {['ALEX', 'A.M.', 'EST. 26', 'ALPINE'].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          className={`engraving-chip${
+                            engravingText === preset ? ' is-active' : ''
+                          }`}
+                          onClick={() => {
+                            setEngravingText(preset);
+                            triggerFastFlowPulse();
+                          }}
+                        >
+                          {preset}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="engraving-style-grid">
+                      <div className="engraving-style-group">
+                        <span className="engraving-mini-label">Typography</span>
+                        <div className="engraving-seg-row">
+                          {(
+                            [
+                              { id: 'serif', label: 'Atelier Serif' },
+                              { id: 'sans', label: 'Editorial Sans' },
+                              { id: 'mono', label: 'Tech Mono' },
+                            ] as const
+                          ).map((f) => (
+                            <button
+                              key={f.id}
+                              type="button"
+                              className={`engraving-seg-btn${
+                                engravingFont === f.id ? ' is-active' : ''
+                              }`}
+                              onClick={() => {
+                                setEngravingFont(f.id);
+                                triggerFastFlowPulse();
+                              }}
+                            >
+                              {f.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="engraving-style-group">
+                        <span className="engraving-mini-label">Placement</span>
+                        <div className="engraving-seg-row">
+                          {(
+                            [
+                              { id: 'vertical', label: 'Vertical Spine' },
+                              { id: 'horizontal', label: 'Horizontal Crest' },
+                            ] as const
+                          ).map((o) => (
+                            <button
+                              key={o.id}
+                              type="button"
+                              className={`engraving-seg-btn${
+                                engravingOrientation === o.id ? ' is-active' : ''
+                              }`}
+                              onClick={() => {
+                                setEngravingOrientation(o.id);
+                                triggerFastFlowPulse();
+                              }}
+                            >
+                              {o.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="spec-list">
                 <div className="spec-row">
                   <span className="spec-key">Insulation</span>
@@ -2219,7 +2711,9 @@ export default function App() {
                 onClick={addFlagshipToBag}
               >
                 <span className="btn-label" id="add-to-bag-label">
-                  Add to Bag — ${price + (FINISH_META[finish].premiumDelta ?? 0)}
+                  {engravingEnabled && engravingText.trim()
+                    ? `Add Engraved Flask — $${price + (FINISH_META[finish].premiumDelta ?? 0)}`
+                    : `Add to Bag — $${price + (FINISH_META[finish].premiumDelta ?? 0)}`}
                 </span>
               </button>
             </div>
@@ -2334,6 +2828,14 @@ export default function App() {
             return next;
           });
         }}
+        onAddToBag={handleAddCatalogProduct}
+      />
+
+      {/* Interactive 3-Step Bespoke Vessel Finder Modal */}
+      <BottleFinderModal
+        open={finderOpen}
+        onClose={() => setFinderOpen(false)}
+        onQuickView={handleOpenQuickView}
         onAddToBag={handleAddCatalogProduct}
       />
 
