@@ -2,13 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import gsap from 'gsap';
 import {
+  Box,
   Camera,
   ChevronDown,
   ChevronUp,
   Info,
   Layers,
+  Loader2,
   RotateCcw,
   ShoppingBag,
   Sparkles,
@@ -248,12 +251,15 @@ function createBrandWrapTexture(
   baseHex: string,
   inkHex: string,
   sizeLabel: string,
-  isGlass: boolean
+  isGlass: boolean,
+  resolution = 1024
 ): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
-  canvas.width = 1024;
-  canvas.height = 1024;
+  canvas.width = resolution;
+  canvas.height = resolution;
   const ctx = canvas.getContext('2d')!;
+  const scale = resolution / 1024;
+  ctx.scale(scale, scale);
 
   if (isGlass) {
     ctx.clearRect(0, 0, 1024, 1024);
@@ -361,6 +367,7 @@ export function BottleStudio3D({
   const [dockCollapsed, setDockCollapsed] = useState<boolean>(false);
   const [hoveredPart, setHoveredPart] = useState<BottlePartId | null>(null);
   const [pinnedPart, setPinnedPart] = useState<BottlePartId | null>(null);
+  const [exportingGlb, setExportingGlb] = useState<boolean>(false);
 
   const tooltipAnchorRef = useRef<HTMLDivElement | null>(null);
   const tooltipCardRef = useRef<HTMLDivElement | null>(null);
@@ -468,6 +475,7 @@ export function BottleStudio3D({
     updateTheme: (t: 'light' | 'dark', dp: 'morning' | 'day' | 'evening') => void;
     jumpCamera: (preset: CameraPresetKey) => void;
     capturePng: () => string | null;
+    exportGlb: () => Promise<ArrayBuffer>;
   } | null>(null);
 
   useEffect(() => {
@@ -1065,6 +1073,165 @@ export function BottleStudio3D({
         renderer.render(scene, camera);
         return renderer.domElement.toDataURL('image/png');
       },
+      exportGlb: async () => {
+        const s = stateRef.current;
+        const spec =
+          STUDIO_FINISHES.find((f) => f.id === s.studioFinish) ||
+          STUDIO_FINISHES[0];
+        const sz = SIZE_SPECS[s.studioSize];
+
+        // Real-world AR meter scale: 3.68 scene units * 0.075 ~= 0.276 m (27.6 cm)
+        const AR_METER_SCALE = 0.075;
+        const disposableMats: THREE.Material[] = [];
+
+        const cloneCleanMat = <T extends THREE.MeshStandardMaterial>(
+          src: T,
+          overrideMap?: THREE.Texture
+        ): T => {
+          const cloned = src.clone() as T;
+          cloned.emissive.setHex(0x000000);
+          cloned.emissiveIntensity = 0;
+          if (overrideMap) {
+            cloned.map = overrideMap;
+          }
+          cloned.needsUpdate = true;
+          disposableMats.push(cloned);
+          return cloned;
+        };
+
+        // Render an ultra-crisp 2048x2048 engraved brand wrap specifically for GLB export
+        const exportBrandTex = createBrandWrapTexture(
+          spec.hex,
+          spec.logoInk,
+          sz.label,
+          Boolean(spec.isGlass),
+          2048
+        );
+
+        const exportRoot = new THREE.Group();
+        exportRoot.name = `Waterholic_Flask_${spec.label.replace(/\s+/g, '_')}_${sz.label.replace(/\s+/g, '')}`;
+        exportRoot.userData = {
+          brand: 'Waterholic',
+          finish: spec.label,
+          capacity: sz.label,
+          units: 'meters',
+          siliconeBoot: s.showBoot,
+          explodedView: s.exploded > 0.06,
+        };
+        exportRoot.scale.set(
+          sz.scaleXZ * AR_METER_SCALE,
+          sz.scaleY * AR_METER_SCALE,
+          sz.scaleXZ * AR_METER_SCALE
+        );
+        // Lift slightly if exploded boot drops below y=0 so AR placement stays grounded
+        if (s.showBoot && bootMesh.position.y < 0) {
+          exportRoot.position.y =
+            -bootMesh.position.y * sz.scaleY * AR_METER_SCALE;
+        }
+
+        if (bootMesh.visible) {
+          const expBoot = new THREE.Mesh(bootGeo, cloneCleanMat(bootMat));
+          expBoot.name = 'Silicone_Base_Boot';
+          expBoot.position.copy(bootMesh.position);
+          exportRoot.add(expBoot);
+        }
+
+        const expBody = new THREE.Mesh(
+          bodyGeo,
+          cloneCleanMat(bodyMat, exportBrandTex)
+        );
+        expBody.name = 'Outer_Double_Wall_Body';
+        expBody.rotation.copy(bodyMesh.rotation);
+        exportRoot.add(expBody);
+
+        if (coreMesh.visible) {
+          const expCore = new THREE.Mesh(coreGeo, cloneCleanMat(coreMat));
+          expCore.name = 'Copper_Vacuum_Core';
+          expCore.position.copy(coreMesh.position);
+          exportRoot.add(expCore);
+        }
+
+        if (waterMesh.visible) {
+          const expWater = new THREE.Mesh(waterGeo, cloneCleanMat(waterMat));
+          expWater.name = 'Pure_Water_Volume';
+          expWater.position.copy(waterMesh.position);
+          exportRoot.add(expWater);
+        }
+
+        const expSteelMat = cloneCleanMat(steelMat);
+        const expCollar = new THREE.Mesh(collarGeo, expSteelMat);
+        expCollar.name = 'Stainless_Neck_Collar';
+        expCollar.position.copy(collarMesh.position);
+        exportRoot.add(expCollar);
+
+        const expGasket = new THREE.Mesh(gasketGeo, cloneCleanMat(gasketMat));
+        expGasket.name = 'Silicone_O_Ring_Gasket';
+        expGasket.position.copy(gasketMesh.position);
+        expGasket.rotation.copy(gasketMesh.rotation);
+        exportRoot.add(expGasket);
+
+        const expCapGroup = new THREE.Group();
+        expCapGroup.name = 'Chug_Lid_Assembly';
+        expCapGroup.position.copy(capGroup.position);
+
+        const expLid = new THREE.Mesh(lidGeo, cloneCleanMat(lidMat));
+        expLid.name = 'Chug_Lid_Cap';
+        expCapGroup.add(expLid);
+
+        // Expand InstancedMesh knurled ribs into standard meshes sharing geometry & material
+        // for 100% compatibility across AR Quick Look, Android Scene Viewer, Blender & Spline
+        const expRibsGroup = new THREE.Group();
+        expRibsGroup.name = 'Knurled_Grip_Ribs';
+        const expRibMat = cloneCleanMat(ribMat);
+        const instMatrix = new THREE.Matrix4();
+        for (let i = 0; i < ribCount; i++) {
+          ribInst.getMatrixAt(i, instMatrix);
+          const ribPiece = new THREE.Mesh(ribGeo, expRibMat);
+          ribPiece.name = `Grip_Rib_${String(i + 1).padStart(2, '0')}`;
+          ribPiece.applyMatrix4(instMatrix);
+          expRibsGroup.add(ribPiece);
+        }
+        expCapGroup.add(expRibsGroup);
+
+        const expLoop = new THREE.Mesh(loopGeo, cloneCleanMat(loopMat));
+        expLoop.name = 'Carry_Loop_Arch';
+        expCapGroup.add(expLoop);
+
+        const expPin = new THREE.Mesh(pinGeo, expSteelMat);
+        expPin.name = 'Steel_Hinge_Pins';
+        expPin.position.copy(pinMesh.position);
+        expPin.rotation.copy(pinMesh.rotation);
+        expCapGroup.add(expPin);
+
+        exportRoot.add(expCapGroup);
+        exportRoot.updateMatrixWorld(true);
+
+        const exporter = new GLTFExporter();
+        try {
+          const result = await new Promise<ArrayBuffer>((resolve, reject) => {
+            exporter.parse(
+              exportRoot,
+              (output) => {
+                if (output instanceof ArrayBuffer) {
+                  resolve(output);
+                } else {
+                  reject(new Error('Expected binary GLB ArrayBuffer output'));
+                }
+              },
+              (err) => reject(err),
+              {
+                binary: true,
+                onlyVisible: true,
+                maxTextureSize: 2048,
+              }
+            );
+          });
+          return result;
+        } finally {
+          exportBrandTex.dispose();
+          disposableMats.forEach((m) => m.dispose());
+        }
+      },
     };
 
     // Stop preset lerp as soon as user grabs orbit controls
@@ -1263,6 +1430,38 @@ export function BottleStudio3D({
     onSnapshotSaved?.('Saved 3D Bottle Studio render as PNG');
   };
 
+  const handleExportGlb = async () => {
+    if (exportingGlb || !sceneApiRef.current) return;
+    setExportingGlb(true);
+    try {
+      const buffer = await sceneApiRef.current.exportGlb();
+      const blob = new Blob([buffer], { type: 'model/gltf-binary' });
+      const objectUrl = URL.createObjectURL(blob);
+      const sizeSlug = studioSize.replace(/\s+/g, '').toLowerCase();
+      const cutawaySuffix = exploded > 0.06 ? '-cutaway' : '';
+      const bootSuffix = showBoot ? '' : '-noboot';
+      const fileName = `waterholic-3d-${studioFinish}-${sizeSlug}${bootSuffix}${cutawaySuffix}.glb`;
+
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+
+      const sizeKb = Math.max(1, Math.round(buffer.byteLength / 1024));
+      onSnapshotSaved?.(
+        `Exported ${fileName} (${sizeKb} KB) — AR & 3D ready`
+      );
+    } catch (err) {
+      console.error('Failed to export 3D GLB:', err);
+      onSnapshotSaved?.('Could not export GLB model — please try again');
+    } finally {
+      setExportingGlb(false);
+    }
+  };
+
   return (
     <section id="studio-3d" className="studio3d-section">
       <div className="container">
@@ -1272,11 +1471,29 @@ export function BottleStudio3D({
             <h2 className="section-title">Inspect Every Millimeter in 3D</h2>
             <p className="studio3d-lead">
               Orbit 360°, peel back the copper-lined vacuum chamber, test all 6
-              finishes including borosilicate Transparent glass, and add your exact
-              build straight to your bag.
+              finishes including borosilicate Transparent glass, export a
+              real-scale .GLB for AR or 3D apps, or add your exact build to your bag.
             </p>
           </div>
           <div className="studio3d-header-actions">
+            <button
+              type="button"
+              className="btn btn-ghost studio3d-glb-btn"
+              onClick={handleExportGlb}
+              disabled={exportingGlb}
+              title="Download high-resolution binary .GLB (real-world meter scale) for AR, Blender, Spline & 3D projects"
+            >
+              {exportingGlb ? (
+                <Loader2
+                  size={16}
+                  className="studio3d-spin"
+                  aria-hidden="true"
+                />
+              ) : (
+                <Box size={16} aria-hidden="true" />
+              )}
+              {exportingGlb ? 'Exporting GLB...' : 'Export 3D (.GLB)'}
+            </button>
             <button
               type="button"
               className="btn btn-ghost"

@@ -39,6 +39,7 @@ import {
 } from './components/LaunchExperienceSection';
 import { BottleFinderModal } from './components/BottleFinderModal';
 import { FastFlowPriceWave } from './components/FastFlowPriceWave';
+import { AmbientCursorGlow } from './components/AmbientCursorGlow';
 import {
   DAYPART_META,
   formatShortLocalTime,
@@ -1767,6 +1768,7 @@ export default function App() {
       </div>
 
       <div className="grain-overlay" aria-hidden="true" />
+      <AmbientCursorGlow daypart={activeDaypart} />
 
       {announcementVisible && (
         <div

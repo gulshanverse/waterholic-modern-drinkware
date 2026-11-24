@@ -5671,6 +5671,33 @@ a {
   gap: 8px;
 }
 
+.studio3d-glb-btn {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+}
+
+.studio3d-glb-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.studio3d-glb-btn:disabled {
+  opacity: 0.72;
+  cursor: wait;
+}
+
+.studio3d-spin {
+  animation: studio3dSpin 0.9s linear infinite;
+}
+
+@keyframes studio3dSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .studio3d-stage-shell {
   position: relative;
   border-radius: 20px;
@@ -11895,6 +11922,79 @@ body {
   }
 }
 
+/* ==========================================================================
+   Ambient Circadian Radial-Gradient Cursor Glow
+   ========================================================================== */
+.ambient-cursor-glow {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 420ms var(--ease-out);
+  --cursor-glow-core: color-mix(in srgb, var(--accent) 13%, transparent);
+  --cursor-glow-mid: color-mix(in srgb, var(--accent) 5.5%, transparent);
+}
+
+.ambient-cursor-glow.is-visible {
+  opacity: 1;
+}
+
+.ambient-cursor-glow.is-interactive {
+  --cursor-glow-core: color-mix(in srgb, var(--accent) 18%, transparent);
+  --cursor-glow-mid: color-mix(in srgb, var(--accent) 7.5%, transparent);
+}
+
+[data-daypart='morning'] .ambient-cursor-glow,
+.ambient-cursor-glow[data-daypart='morning'] {
+  --cursor-glow-core: rgba(217, 119, 6, 0.13);
+  --cursor-glow-mid: rgba(245, 158, 11, 0.055);
+}
+
+[data-daypart='morning'] .ambient-cursor-glow.is-interactive,
+.ambient-cursor-glow[data-daypart='morning'].is-interactive {
+  --cursor-glow-core: rgba(217, 119, 6, 0.175);
+  --cursor-glow-mid: rgba(245, 158, 11, 0.08);
+}
+
+[data-daypart='evening'] .ambient-cursor-glow,
+.ambient-cursor-glow[data-daypart='evening'] {
+  mix-blend-mode: screen;
+  --cursor-glow-core: rgba(129, 140, 248, 0.18);
+  --cursor-glow-mid: rgba(99, 102, 241, 0.075);
+}
+
+[data-daypart='evening'] .ambient-cursor-glow.is-interactive,
+.ambient-cursor-glow[data-daypart='evening'].is-interactive {
+  --cursor-glow-core: rgba(129, 140, 248, 0.24);
+  --cursor-glow-mid: rgba(99, 102, 241, 0.105);
+}
+
+.ambient-cursor-orb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: clamp(380px, 38vw, 620px);
+  height: clamp(380px, 38vw, 620px);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at center,
+    var(--cursor-glow-core) 0%,
+    var(--cursor-glow-mid) 36%,
+    transparent 70%
+  );
+  will-change: transform;
+  transform: translate3d(-999px, -999px, 0);
+  transition: background 520ms var(--ease-out);
+}
+
+@media (hover: none), (pointer: coarse) {
+  .ambient-cursor-glow {
+    display: none;
+  }
+}
+
 /* Reduced Motion Respect (taste-skill Section 6.B & emil-design-eng) */
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -11909,7 +12009,8 @@ body {
     transition-duration: 0.01ms !important;
   }
 
-  .skel-block::after {
+  .skel-block::after,
+  .ambient-cursor-glow {
     display: none;
   }
 
