@@ -7114,10 +7114,24 @@ body {
   }
 }
 
-/* Mobile Layout & Touch Ergonomics (<= 768px) */
+/* Mobile Layout & Accessible 48x48px Touch Ergonomics (<= 768px) */
 @media (max-width: 768px) {
   html {
     font-size: 16px;
+  }
+
+  /* Universal 48x48px minimum touch target baseline for mobile interactive controls */
+  button,
+  [role='button'],
+  [role='tab'],
+  [role='switch'],
+  [role='radio'],
+  select,
+  input:not([type='checkbox']):not([type='radio']),
+  summary {
+    min-width: 48px;
+    min-height: 48px;
+    touch-action: manipulation;
   }
 
   .container {
@@ -7125,10 +7139,12 @@ body {
   }
 
   .site-header {
-    height: 58px;
+    height: 64px;
   }
 
   .brand-lockup {
+    min-width: 48px;
+    min-height: 48px;
     gap: 8px;
     font-size: 17px;
   }
@@ -7139,30 +7155,43 @@ body {
   }
 
   .header-nav {
-    gap: 7px;
+    gap: 6px;
   }
 
-  .icon-btn {
-    width: 38px;
-    height: 38px;
+  .icon-btn,
+  .mobile-menu-btn {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
   }
 
   .profile-nav-btn {
-    width: 38px;
-    height: 38px;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
     padding: 0;
     justify-content: center;
   }
 
   .concierge-nav-btn {
-    padding: 0 11px;
-    height: 38px;
+    padding: 0 12px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+  }
+
+  .btn,
+  .btn-sm {
+    min-width: 48px;
+    min-height: 48px;
   }
 
   /* Hero Mobile Alignment */
   .hero {
     min-height: auto;
-    padding-top: 78px;
+    padding-top: 84px;
     padding-bottom: 44px;
     align-items: flex-start;
   }
@@ -7195,7 +7224,8 @@ body {
 
   .hero-actions .btn {
     flex: 1 1 160px;
-    padding: 14px 18px;
+    min-height: 48px;
+    padding: 12px 18px;
     font-size: 14.5px;
   }
 
@@ -7217,9 +7247,10 @@ body {
   }
 
   .swatch-btn {
-    min-height: 36px;
-    padding: 6px 10px;
-    font-size: 12.5px;
+    min-width: 48px;
+    min-height: 48px;
+    padding: 10px 12px;
+    font-size: 13px;
   }
 
   .section-title {
@@ -7261,14 +7292,29 @@ body {
     flex-shrink: 0;
     scroll-snap-align: start;
     white-space: nowrap;
-    min-height: 40px;
-    padding: 8px 14px;
+    min-width: 48px;
+    min-height: 48px;
+    padding: 10px 15px;
     font-size: 13.5px;
   }
 
   .catalog-toolbar {
     padding: 14px;
     gap: 12px;
+  }
+
+  .catalog-search-input {
+    height: 48px;
+    min-height: 48px;
+    padding-right: 52px;
+  }
+
+  .search-clear-btn {
+    right: 0;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
   }
 
   .catalog-controls-row {
@@ -7279,11 +7325,14 @@ body {
   .saved-filter-btn {
     grid-column: 1 / -1;
     justify-content: center;
-    height: 42px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
   }
 
   .filter-select {
-    height: 42px;
+    height: 48px;
+    min-height: 48px;
     font-size: 13.5px;
   }
 
@@ -7291,6 +7340,22 @@ body {
     gap: 10px;
     margin-bottom: 18px;
     font-size: 13px;
+  }
+
+  .reset-filters-link {
+    display: inline-flex;
+    align-items: center;
+    min-width: 48px;
+    min-height: 48px;
+    padding: 0 8px;
+  }
+
+  .page-size-btn,
+  .page-btn,
+  .page-num-btn {
+    min-width: 48px;
+    min-height: 48px;
+    height: 48px;
   }
 
   .recently-viewed-strip {
@@ -7308,28 +7373,62 @@ body {
     padding-bottom: 4px;
   }
 
+  .recent-chip {
+    min-width: 48px;
+    min-height: 48px;
+  }
+
   .product-card-body {
     padding: 14px 16px 16px;
   }
 
+  .product-title-link {
+    display: inline-flex;
+    align-items: center;
+    min-width: 48px;
+    min-height: 48px;
+    width: 100%;
+    padding-block: 4px;
+  }
+
+  .product-card-row {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  .card-swatches {
+    gap: 0;
+  }
+
   .card-swatch-dot {
-    width: 26px;
-    height: 26px;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    padding: 0;
+  }
+
+  .card-swatch-ring {
+    inset: 10px;
   }
 
   .card-swatch-fill {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
   }
 
   .wishlist-btn {
-    width: 42px;
-    height: 42px;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
   }
 
   .compare-toggle-btn {
-    min-height: 36px;
-    padding: 0 12px;
+    min-width: 48px;
+    min-height: 48px;
+    height: 48px;
+    padding: 0 14px;
   }
 
   .product-card-footer {
@@ -7344,9 +7443,11 @@ body {
 
   .btn-card-secondary,
   .btn-card-primary {
-    min-height: 42px;
-    padding: 0 14px;
-    font-size: 13px;
+    min-width: 48px;
+    min-height: 48px;
+    height: 48px;
+    padding: 0 16px;
+    font-size: 13.5px;
     white-space: nowrap;
   }
 
@@ -7370,17 +7471,19 @@ body {
   }
 
   .studio3d-chip {
-    padding: 5px 10px;
+    padding: 6px 10px;
     font-size: 11px;
-    max-width: 65%;
+    max-width: 58%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .studio3d-mini-btn {
-    padding: 6px 10px;
-    font-size: 11.5px;
+    min-width: 48px;
+    min-height: 48px;
+    padding: 0 12px;
+    font-size: 12px;
   }
 
   .studio3d-camera-bar {
@@ -7395,13 +7498,15 @@ body {
     padding: 8px 12px;
     justify-content: center;
     flex-wrap: wrap;
+    gap: 6px;
     background: var(--bg);
   }
 
   .studio3d-cam-btn {
-    min-height: 34px;
-    padding: 6px 11px;
-    font-size: 12px;
+    min-width: 48px;
+    min-height: 48px;
+    padding: 8px 14px;
+    font-size: 12.5px;
   }
 
   .studio3d-dock,
@@ -7417,6 +7522,12 @@ body {
     padding: 12px 14px;
   }
 
+  .studio3d-dock-toggle {
+    min-width: 48px;
+    min-height: 48px;
+    padding: 4px 0;
+  }
+
   .studio3d-dock-grid {
     flex-direction: column;
     align-items: stretch;
@@ -7429,6 +7540,48 @@ body {
     gap: 8px;
   }
 
+  .studio3d-swatches {
+    gap: 0;
+    flex-wrap: wrap;
+  }
+
+  .studio3d-swatch {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    padding: 8px;
+    border: none;
+  }
+
+  .studio3d-swatch::after {
+    content: '';
+    position: absolute;
+    inset: 5px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    pointer-events: none;
+    transition: border-color 150ms var(--ease-out);
+  }
+
+  .studio3d-swatch.is-active::after {
+    border-color: var(--accent);
+  }
+
+  .studio3d-swatch-dot {
+    width: 28px;
+    height: 28px;
+  }
+
+  .studio3d-size-btn,
+  .studio3d-toggle-btn {
+    min-width: 48px;
+    min-height: 48px;
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
   .studio3d-slider-group {
     min-width: 0;
     width: 100%;
@@ -7437,10 +7590,12 @@ body {
   .studio3d-range {
     flex: 1;
     min-width: 110px;
+    min-height: 48px;
   }
 
   .studio3d-toggles {
     justify-content: flex-start;
+    flex-wrap: wrap;
   }
 
   /* AI Creative Lab Mobile Alignment */
@@ -7460,8 +7615,16 @@ body {
   .creativelab-tab {
     flex-shrink: 0;
     white-space: nowrap;
-    padding: 9px 14px;
-    font-size: 13px;
+    min-width: 48px;
+    min-height: 48px;
+    padding: 10px 16px;
+    font-size: 13.5px;
+  }
+
+  .creativelab-mic-btn,
+  .creativelab-preset-btn {
+    min-width: 48px;
+    min-height: 48px;
   }
 
   .creativelab-panel,
@@ -7480,6 +7643,7 @@ body {
 
   .creativelab-output-actions .btn {
     flex: 1 1 140px;
+    min-height: 48px;
     padding: 12px 14px;
     font-size: 13.5px;
   }
@@ -7503,6 +7667,44 @@ body {
     left: 16px;
     right: 16px;
     gap: 14px;
+  }
+
+  .showcase-dots {
+    padding: 0 8px;
+    gap: 2px;
+  }
+
+  .stage-dot {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    padding: 0;
+    background: transparent;
+  }
+
+  .stage-dot::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 24px;
+    height: 6px;
+    border-radius: var(--radius-pill);
+    background: rgba(239, 243, 241, 0.38);
+    transition: width 240ms var(--ease-out), background-color 240ms var(--ease-out);
+  }
+
+  .stage-dot.is-active {
+    width: 52px;
+    background: transparent;
+  }
+
+  .stage-dot.is-active::before {
+    width: 40px;
+    background: #f4f6f5;
   }
 
   .caption-title {
@@ -7530,7 +7732,9 @@ body {
   }
 
   .seg-btn {
-    padding: 11px 12px;
+    min-width: 48px;
+    min-height: 48px;
+    padding: 12px;
     font-size: 14px;
     text-align: center;
   }
@@ -7593,9 +7797,10 @@ body {
   }
 
   .pill-option {
-    padding: 9px 14px;
+    min-width: 48px;
+    min-height: 48px;
+    padding: 10px 16px;
     font-size: 14px;
-    min-height: 40px;
   }
 
   .spec-list {
@@ -7643,6 +7848,8 @@ body {
 
   .campus-mode-tab {
     justify-content: center;
+    min-width: 48px;
+    min-height: 48px;
     padding: 10px 8px;
     font-size: 13px;
     border-radius: 10px;
@@ -7669,6 +7876,7 @@ body {
 
   .challenges-sync-actions button {
     flex: 1 1 120px;
+    min-height: 48px;
     justify-content: center;
   }
 
@@ -7684,12 +7892,15 @@ body {
 
   .challenges-subtab {
     justify-content: center;
-    padding: 9px 10px;
+    min-width: 48px;
+    min-height: 48px;
+    padding: 10px;
     font-size: 12.5px;
   }
 
   .challenges-create-trigger {
     width: 100%;
+    min-height: 48px;
     justify-content: center;
   }
 
@@ -7721,6 +7932,13 @@ body {
     flex: 1;
     width: auto;
     min-width: 0;
+    min-height: 48px;
+  }
+
+  .dorm-code-btn,
+  .dorm-delete-btn {
+    min-width: 48px;
+    min-height: 48px;
   }
 
   .dorm-group-head {
@@ -7732,10 +7950,15 @@ body {
     flex-wrap: wrap;
   }
 
-  /* Support & Newsletter Mobile */
+  /* Support, FAQ & Newsletter Mobile */
   .support-header {
     gap: 14px;
     margin-bottom: 24px;
+  }
+
+  .faq-trigger {
+    min-height: 48px;
+    min-width: 48px;
   }
 
   .support-form-card,
@@ -7754,6 +7977,7 @@ body {
   .student-email-input {
     width: 100%;
     min-width: 0;
+    min-height: 48px;
   }
 
   /* Modals & Drawers Mobile */
@@ -7771,13 +7995,21 @@ body {
     border-radius: 18px 18px 12px 12px;
   }
 
+  .modal-close-btn,
+  .drawer-back-btn {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+  }
+
   .modal-info-col {
     padding-right: 0;
   }
 
   .modal-product-title {
     font-size: 22px;
-    padding-right: 36px;
+    padding-right: 52px;
   }
 
   .modal-purchase-row {
@@ -7787,6 +8019,7 @@ body {
   .modal-add-btn {
     min-width: 0;
     width: 100%;
+    min-height: 48px;
   }
 
   .bag-drawer,
@@ -7799,7 +8032,7 @@ body {
   }
 
   .drawer-header {
-    padding: 14px 16px;
+    padding: 12px 16px;
   }
 
   .drawer-body {
@@ -7810,36 +8043,200 @@ body {
     padding: 14px 16px max(18px, env(safe-area-inset-bottom));
   }
 
+  .bag-qty-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .qty-btn {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    font-size: 18px;
+  }
+
+  .bag-remove-btn {
+    min-width: 48px;
+    min-height: 48px;
+    padding: 0 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Bag Gift Message Switch & Controls: Accessible 48x48px hit targets */
+  .gift-collapse-btn {
+    min-width: 48px;
+    min-height: 48px;
+    padding: 0 8px;
+    justify-content: center;
+  }
+
+  .gift-switch {
+    width: 52px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    border: none;
+    background: transparent;
+  }
+
+  .gift-switch::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 11px;
+    width: 44px;
+    height: 26px;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-elevated);
+    transition: background-color 180ms var(--ease-out), border-color 180ms var(--ease-out);
+  }
+
+  .gift-switch.is-on {
+    background: transparent;
+    border-color: transparent;
+  }
+
+  .gift-switch.is-on::before {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .gift-switch-thumb {
+    top: 14px;
+    left: 7px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .gift-switch.is-on .gift-switch-thumb {
+    transform: translateX(18px);
+  }
+
+  .gift-wrap-check-row {
+    min-height: 48px;
+    align-items: center;
+  }
+
+  .gift-wrap-style-btn,
+  .gift-preset-btn {
+    min-width: 48px;
+    min-height: 48px;
+  }
+
   .profile-tabs {
     padding: 8px 10px;
     gap: 4px;
   }
 
   .profile-tab-btn {
+    min-width: 48px;
+    min-height: 48px;
     font-size: 11.5px;
     padding: 8px 4px;
+  }
+
+  .hydration-add-btn,
+  .hydration-share-btn,
+  .share-seg-btn,
+  .share-palette-btn,
+  .share-sec-btn {
+    min-width: 48px;
+    min-height: 48px;
   }
 
   .concierge-toolbar {
     padding: 8px 12px;
   }
 
+  .concierge-tab,
+  .concierge-chip,
+  .concierge-model-btn,
+  .concierge-quick-btn,
+  .concierge-mic-btn,
+  .concierge-send-btn {
+    min-width: 48px;
+    min-height: 48px;
+  }
+
+  .concierge-citation-link {
+    display: inline-flex;
+    align-items: center;
+    min-width: 48px;
+    min-height: 48px;
+  }
+
   .concierge-composer {
     padding: 10px 12px max(12px, env(safe-area-inset-bottom));
   }
 
+  .compare-tray-chip {
+    min-height: 48px;
+    padding: 0 2px 0 10px;
+  }
+
+  .compare-tray-chip button {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .cart-toast-action {
+    min-width: 48px;
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+  }
+
+  .back-to-top-btn,
+  .concierge-fab {
+    min-width: 48px;
+    min-height: 48px;
+  }
+
+  /* Footer Links & Interactive Actions: Accessible 48px Touch Targets */
+  .footer-brand-btn,
+  .footer-link,
+  .footer-utility-link,
+  .footer-legal-link,
+  .footer-copy-btn,
+  .footer-inline-action {
+    min-width: 48px;
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .footer-link-list {
+    gap: 2px;
+  }
+
   /* Footer Mobile Breathing Room (Clear of FAB) */
   .site-footer {
-    padding-bottom: calc(82px + env(safe-area-inset-bottom));
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
   }
 }
 
 /* Narrow Phone Refinements (<= 640px) */
 @media (max-width: 640px) {
-  .concierge-nav-btn {
-    width: 38px;
-    padding: 0;
-    justify-content: center;
+  /* Keep 4 crisp 48x48px header controls (Theme, Profile, Bag, Menu) with zero crowding on 360px phones;
+     Search & AI Concierge remain one tap away in the Mobile Menu Drawer and AI Concierge FAB */
+  .concierge-nav-btn,
+  .header-search-btn {
+    display: none;
+  }
+
+  .header-nav {
+    gap: 4px;
   }
 
   .concierge-fab {
@@ -7847,6 +8244,8 @@ body {
     bottom: max(16px, env(safe-area-inset-bottom));
     width: 48px;
     height: 48px;
+    min-width: 48px;
+    min-height: 48px;
     padding: 0;
     justify-content: center;
     border-radius: 50%;
@@ -7858,31 +8257,33 @@ body {
 
   .back-to-top-btn {
     right: 14px;
-    bottom: calc(74px + env(safe-area-inset-bottom));
-    width: 44px;
-    height: 44px;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
   }
 
   .cart-toast {
     left: 12px;
-    right: 72px;
+    right: 74px;
     bottom: max(16px, env(safe-area-inset-bottom));
     transform: none;
     max-width: none;
     justify-content: space-between;
-    padding: 10px 14px;
+    padding: 6px 8px 6px 14px;
     font-size: 13px;
-    gap: 10px;
+    gap: 8px;
     border-radius: 14px;
   }
 
   .compare-tray {
     left: 12px;
-    right: 72px;
+    right: 74px;
     bottom: max(16px, env(safe-area-inset-bottom));
     transform: none;
     max-width: none;
-    padding: 10px 12px;
+    padding: 8px 10px;
     border-radius: 14px;
   }
 
@@ -7903,10 +8304,6 @@ body {
 
 /* Extra-Small Phones (<= 430px) */
 @media (max-width: 430px) {
-  .header-search-btn {
-    display: none;
-  }
-
   .hero-actions {
     flex-direction: column;
     align-items: stretch;
