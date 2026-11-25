@@ -18,6 +18,7 @@ import deskRitualImg from '../assets/images/waterholic_tumbler_logo_179546201871
 import alpineKitImg from '../assets/images/waterholic_outdoor_logo_bottle_1795462017951.jpg';
 import campusReserveImg from '../assets/images/waterholic_campus_study_logo_1795462052216.jpg';
 import craftLabMacroImg from '../assets/images/launch_craft_lab_macro.jpg';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 interface PressMention {
   id: string;
@@ -89,7 +90,7 @@ const BRAND_GUARANTEES = [
   {
     icon: Sparkles,
     title: '30-Day Field Trial',
-    detail: 'Carry it to desk, studio, or trail — effortless returns.',
+    detail: 'Carry it to desk, studio, or trail with effortless returns.',
   },
 ];
 
@@ -100,6 +101,7 @@ interface PressAndGuaranteeStripProps {
 export function PressAndGuaranteeStrip({
   onOpenFinder,
 }: PressAndGuaranteeStripProps) {
+  const { formatPrice } = useCurrency();
   const [activePressId, setActivePressId] = useState<string>(
     PRESS_MENTIONS[0].id
   );
@@ -186,6 +188,10 @@ export function PressAndGuaranteeStrip({
         <div className="guarantee-grid" aria-label="Waterholic brand guarantees">
           {BRAND_GUARANTEES.map((g) => {
             const Icon = g.icon;
+            const detailText =
+              g.title === 'Carbon-Neutral Express'
+                ? `Complimentary dispatch on orders ${formatPrice(60)}+ worldwide.`
+                : g.detail;
             return (
               <div key={g.title} className="guarantee-item">
                 <div className="guarantee-icon-box" aria-hidden="true">
@@ -193,7 +199,7 @@ export function PressAndGuaranteeStrip({
                 </div>
                 <div className="guarantee-copy">
                   <h3 className="guarantee-title">{g.title}</h3>
-                  <p className="guarantee-detail">{g.detail}</p>
+                  <p className="guarantee-detail">{detailText}</p>
                 </div>
               </div>
             );
@@ -304,6 +310,7 @@ export function CuratedRitualBundles({
   onOpenFinder,
   onShowToast,
 }: CuratedRitualBundlesProps) {
+  const { formatPrice } = useCurrency();
   const [selectedPalettes, setSelectedPalettes] = useState<
     Record<string, string>
   >(() =>
@@ -371,7 +378,7 @@ export function CuratedRitualBundles({
 
     setJustAddedId(bundle.id);
     onShowToast(
-      `Added ${bundle.name} (${activePalette.label}) — Saved $${bundle.savings}`
+      `Added ${bundle.name} (${activePalette.label}), saved ${formatPrice(bundle.savings)}`
     );
     window.setTimeout(() => {
       setJustAddedId((curr) => (curr === bundle.id ? null : curr));
@@ -388,14 +395,14 @@ export function CuratedRitualBundles({
         <div className="launch-section-head">
           <div>
             <span className="launch-eyebrow">
-              Curated Launch Editions · Save up to $26
+              Curated Launch Editions · Save up to {formatPrice(26)}
             </span>
             <h2 id="bundles-heading" className="section-title">
               Ritual sets, calibrated together.
             </h2>
             <p className="section-sub">
               Three architect-curated hydration kits pairing our flagship
-              vessels, tumblers, and filtration gear — delivered in embossed
+              vessels, tumblers, and filtration gear, delivered in embossed
               presentation boxes with complimentary carbon-neutral express
               shipping.
             </p>
@@ -433,7 +440,7 @@ export function CuratedRitualBundles({
                       {bundle.edition}
                     </span>
                     <span className="ritual-bundle-savings tabular-nums">
-                      Save ${bundle.savings}
+                      Save {formatPrice(bundle.savings)}
                     </span>
                   </div>
                 </div>
@@ -504,7 +511,7 @@ export function CuratedRitualBundles({
                               <span>{item.name}</span>
                             </span>
                             <span className="ritual-manifest-price tabular-nums">
-                              ${item.price}
+                              {formatPrice(item.price)}
                             </span>
                           </button>
                         </li>
@@ -515,10 +522,10 @@ export function CuratedRitualBundles({
                   <div className="ritual-bundle-footer">
                     <div className="ritual-price-block tabular-nums">
                       <span className="ritual-price-current">
-                        ${bundle.bundlePrice}
+                        {formatPrice(bundle.bundlePrice)}
                       </span>
                       <span className="ritual-price-compare">
-                        ${bundle.retailTotal}
+                        {formatPrice(bundle.retailTotal)}
                       </span>
                       <span className="ritual-price-save">
                         Free Express Shipping
@@ -538,7 +545,9 @@ export function CuratedRitualBundles({
                           <span>Set Added to Bag</span>
                         </>
                       ) : (
-                        <span>Add Complete Set — ${bundle.bundlePrice}</span>
+                        <span>
+                          Add Complete Set · {formatPrice(bundle.bundlePrice)}
+                        </span>
                       )}
                     </button>
                   </div>
@@ -564,6 +573,7 @@ const LAB_BENCHMARKS = [
 ];
 
 export function CraftsmanshipAndImpactLedger() {
+  const { formatPrice } = useCurrency();
   const [dailyRefills, setDailyRefills] = useState<number>(3);
 
   const metrics = useMemo(() => {
@@ -605,7 +615,7 @@ export function CraftsmanshipAndImpactLedger() {
                 </span>
                 <p>
                   Electro-polished 18/8 surgical steel bonded to an internal
-                  pure-copper radiation barrier — eliminating metallic flavor
+                  pure-copper radiation barrier, eliminating metallic flavor
                   transfer and condensation permanently.
                 </p>
               </div>
@@ -716,7 +726,7 @@ export function CraftsmanshipAndImpactLedger() {
                   aria-hidden="true"
                 />
                 <span className="impact-metric-num">
-                  ${metrics.dollarsSavedPerYear.toLocaleString()}
+                  {formatPrice(metrics.dollarsSavedPerYear)}
                 </span>
                 <span className="impact-metric-desc">
                   Saved vs. bottled water / yr
@@ -732,7 +742,7 @@ export function CraftsmanshipAndImpactLedger() {
                 <p className="impact-horizon-val">
                   <strong>{metrics.fiveYearBottles.toLocaleString()}</strong>{' '}
                   plastic bottles eliminated ·{' '}
-                  <strong>${metrics.fiveYearSaved.toLocaleString()}</strong>{' '}
+                  <strong>{formatPrice(metrics.fiveYearSaved)}</strong>{' '}
                   kept in your pocket
                 </p>
               </div>

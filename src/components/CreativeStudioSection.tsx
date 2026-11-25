@@ -371,7 +371,7 @@ export function CreativeStudioSection({
             <p className="creativelab-lead">
               Generate bespoke Waterholic bottle concepts, edit your own photos, or
               animate text and snapshots into crisp 16:9 landscape or 9:16 vertical
-              motion reels — completely free to create and download.
+              motion reels, completely free to create and download.
             </p>
           </div>
         </div>

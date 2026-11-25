@@ -892,7 +892,7 @@ export function AiConciergeDrawer({
                 {voiceState === 'idle' && 'Talk Live with Waterholic'}
                 {voiceState === 'connecting' && 'Connecting live voice...'}
                 {voiceState === 'live' &&
-                  (micMuted ? 'Microphone Muted' : 'Listening — Speak Naturally')}
+                  (micMuted ? 'Microphone Muted' : 'Listening · Speak Naturally')}
                 {voiceState === 'error' && 'Voice Connection Paused'}
               </h3>
               <p>

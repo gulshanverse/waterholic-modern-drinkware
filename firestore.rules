@@ -54,7 +54,7 @@ service cloud.firestore {
     function isValidUserProfile(data, userId) {
       return data.keys().hasAll(['ownerId', 'name', 'email', 'dailyGoalMl', 'createdAt', 'updatedAt'])
         && data.keys().hasOnly([
-          'ownerId', 'name', 'email', 'phone', 'university', 'preferredColor',
+          'ownerId', 'name', 'email', 'phone', 'university', 'country', 'preferredColor',
           'dailyGoalMl', 'memberSince', 'savedIds', 'studentDiscountActive',
           'studentEmail', 'createdAt', 'updatedAt'
         ])
@@ -63,6 +63,7 @@ service cloud.firestore {
         && data.email is string && data.email.size() <= 180
         && (!('phone' in data) || (data.phone is string && data.phone.size() <= 40))
         && (!('university' in data) || (data.university is string && data.university.size() <= 120))
+        && (!('country' in data) || (data.country is string && data.country.size() >= 2 && data.country.size() <= 8 && data.country.matches('^[A-Z]+$')))
         && (!('preferredColor' in data) || (data.preferredColor is string && data.preferredColor.size() <= 60))
         && data.dailyGoalMl is number && data.dailyGoalMl >= 500 && data.dailyGoalMl <= 8000
         && (!('memberSince' in data) || (data.memberSince is string && data.memberSince.size() <= 40))
@@ -363,7 +364,7 @@ service cloud.firestore {
           (
             isVerifiedOwner(userId) &&
             incoming().diff(existing()).affectedKeys().hasOnly([
-              'name', 'email', 'phone', 'university', 'preferredColor',
+              'name', 'email', 'phone', 'university', 'country', 'preferredColor',
               'dailyGoalMl', 'savedIds', 'studentDiscountActive',
               'studentEmail', 'updatedAt'
             ])

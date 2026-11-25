@@ -2910,7 +2910,7 @@ const RAW_SEEDS: RawProductSeed[] = [
     rating: 4.9,
     reviews: 715,
     description:
-      'Built for marathon finals weeks and back-to-back lectures — holds 1.5 L of ice water with zero condensation next to laptops and notebooks.',
+      'Built for marathon finals weeks and back-to-back lectures. Holds 1.5 L of ice water with zero condensation next to laptops and notebooks.',
     finishSet: 'alpine',
     sizes: [
       { label: '1.0 L', priceDelta: -6 },

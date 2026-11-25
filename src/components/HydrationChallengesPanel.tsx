@@ -645,7 +645,7 @@ export function HydrationChallengesPanel({
       }
     }
 
-    onShowToast(`Joined "${challenge.title}" — your hydration is live on the leaderboard`);
+    onShowToast(`Joined "${challenge.title}". Your hydration is live on the leaderboard.`);
   };
 
   const handleLeavePublicChallenge = async (challenge: CampusChallengeItem) => {
@@ -765,8 +765,8 @@ export function HydrationChallengesPanel({
           description: (
             newDesc.trim() ||
             (newVisibility === 'private'
-              ? 'Private dorm squad hydration goal — hit the target together!'
-              : 'Open campus hydration leaderboard — log every refill to climb the ranks.')
+              ? 'Private dorm squad hydration goal. Hit the target together!'
+              : 'Open campus hydration leaderboard. Log every refill to climb the ranks.')
           ).slice(0, 280),
           durationLabel: newDuration.slice(0, 40),
           targetMl: Math.max(1000, Math.min(250000, Number(newTargetMl) || 10000)),
@@ -834,7 +834,7 @@ export function HydrationChallengesPanel({
             : `Launched public leaderboard "${title}"`
         );
       } else {
-        // Guest local mode — instant interactive creation
+        // Guest local mode: instant interactive creation
         const localId = `local_${Date.now()}`;
         const localItem: CampusChallengeItem = {
           id: localId,
@@ -843,7 +843,7 @@ export function HydrationChallengesPanel({
           campus: campus.slice(0, 100),
           description:
             newDesc.trim() ||
-            'Dorm hydration pact — sign in with Google anytime to sync live with roommates.',
+            'Dorm hydration pact. Sign in with Google anytime to sync live with roommates.',
           durationLabel: newDuration,
           targetMl: Math.max(1000, Math.min(250000, Number(newTargetMl) || 10000)),
           inviteCode,
@@ -986,7 +986,7 @@ export function HydrationChallengesPanel({
     try {
       await navigator.clipboard.writeText(code);
       setCopiedCode(code);
-      onShowToast(`Invite code ${code} copied — send it to your dorm mates`);
+      onShowToast(`Invite code ${code} copied. Send it to your dorm mates.`);
       window.setTimeout(() => {
         setCopiedCode((c) => (c === code ? null : c));
       }, 2200);
@@ -1018,7 +1018,7 @@ export function HydrationChallengesPanel({
             </div>
             <p className="challenges-sync-sub tabular-nums">
               Today&apos;s intake: <strong>{hydration.consumedMl} ml</strong> /{' '}
-              {profile.dailyGoalMl} ml ({myDailyPct}%) — auto-synced across your
+              {profile.dailyGoalMl} ml ({myDailyPct}%), auto-synced across your
               joined challenges
             </p>
           </div>

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { CATEGORY_MAP, type Product } from '../data/products';
 import type { AddToBagPayload } from './CatalogSection';
 import { triggerAddToBagHaptic } from '../utils/hapticFeedback';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 interface CompareModalProps {
   open: boolean;
@@ -18,6 +19,7 @@ export function CompareModal({
   onRemoveProduct,
   onAddToBag,
 }: CompareModalProps) {
+  const { formatPrice } = useCurrency();
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -96,7 +98,7 @@ export function CompareModal({
                 <td>Price</td>
                 {products.map((p) => (
                   <td key={p.id} className="tabular-nums compare-price">
-                    ${p.price}
+                    {formatPrice(p.price)}
                   </td>
                 ))}
               </tr>

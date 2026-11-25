@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CATEGORIES, PRODUCTS, type CategoryId, type Product } from '../data/products';
 import type { ProfileTab } from './ProfileDrawer';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 export type FooterDocKey =
   | 'shipping'
@@ -209,6 +210,7 @@ export function SiteFooter({
   onNewsletterJoined,
   onShowToast,
 }: SiteFooterProps) {
+  const { currency, formatPrice } = useCurrency();
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
   const [subscribedEmail, setSubscribedEmail] = useState<string>(() => {
@@ -288,7 +290,34 @@ export function SiteFooter({
     }
   };
 
-  const currentDoc = activeDoc ? FOOTER_DOCS[activeDoc] : null;
+  const baseDoc = activeDoc ? FOOTER_DOCS[activeDoc] : null;
+  const currentDoc: FooterDocContent | null = baseDoc
+    ? activeDoc === 'shipping'
+      ? {
+          ...baseDoc,
+          points: baseDoc.points.map((pt, i) =>
+            i === 0
+              ? {
+                  heading: `Free Express Shipping (${formatPrice(60)}+)`,
+                  body: `Orders of ${formatPrice(60)} or more automatically qualify for complimentary 2–4 business day tracked express delivery. Standard shipping on smaller orders is a flat ${formatPrice(6)}.`,
+                }
+              : pt
+          ),
+        }
+      : activeDoc === 'terms'
+        ? {
+            ...baseDoc,
+            points: baseDoc.points.map((pt, i) =>
+              i === 0
+                ? {
+                    ...pt,
+                    body: `Prices are currently displayed for ${currency.countryName} in ${currency.currencyCode} (${currency.symbol.trim()}). You can switch your country anytime in your Member Profile. Promo codes (WATER10, CAMPUS15, FREESHIP) apply cleanly at checkout; student 15% savings pair automatically when verified.`,
+                  }
+                : pt
+            ),
+          }
+        : baseDoc
+    : null;
 
   return (
     <>
@@ -333,7 +362,7 @@ export function SiteFooter({
               {/* Working Hydration Club Newsletter */}
               <div className="footer-newsletter">
                 <p className="footer-newsletter-label">
-                  Join the Hydration Club — 10% off your first refill
+                  Join the Hydration Club for 10% off your first refill
                 </p>
                 {subscribedEmail ? (
                   <div className="footer-subscribed-box" role="status">
@@ -365,7 +394,7 @@ export function SiteFooter({
                           handleCopyText(
                             'WATER10',
                             'code',
-                            'Promo code WATER10 copied — apply in your bag'
+                            'Promo code WATER10 copied. Apply it in your bag.'
                           )
                         }
                       >
@@ -686,7 +715,7 @@ export function SiteFooter({
             </div>
 
             <p className="footer-meta tabular-nums">
-              {PRODUCTS.length} Products · 6 Finishes · Lifetime Warranty
+              {PRODUCTS.length} Products · {currency.countryName} ({currency.symbol.trim()} {currency.currencyCode}) · Lifetime Warranty
             </p>
           </div>
         </div>

@@ -7,6 +7,7 @@ import { PRODUCTS, type Product } from '../data/products';
 import type { BagLineItem } from './BagDrawer';
 import type { HydrationLog, UserProfile } from '../types/profile';
 import { HydrationChallengesPanel } from './HydrationChallengesPanel';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 interface CampusSectionProps {
   studentDiscountActive: boolean;
@@ -64,7 +65,7 @@ const CAMPUS_STORIES: CampusStory[] = [
   {
     id: 'dorm',
     kicker: 'Dorm Room & Late-Night Study',
-    title: 'Pure filtered tap water — no plastic cases up dorm stairs.',
+    title: 'Pure filtered tap water, without hauling plastic cases up dorm stairs.',
     body: 'Turn dorm hallway tap water into crisp, lead- and chlorine-free hydration right at your desk. Pair a borosilicate carbon filter pitcher with a bedside carafe so midnight study focus never requires a vending-machine run.',
     highlights: [
       'Plastic-free borosilicate glass core',
@@ -150,6 +151,7 @@ export function CampusSection({
   onLogWater,
   onShowToast,
 }: CampusSectionProps) {
+  const { formatPrice } = useCurrency();
   const [activeTab, setActiveTab] = useState<'essentials' | 'challenges'>(
     'essentials'
   );
@@ -210,7 +212,7 @@ export function CampusSection({
             </h2>
             <p className="campus-sub">
               From silent library desks and leakproof backpack commutes to dorm
-              water filtration and rec-center workouts — designed for how
+              water filtration and rec-center workouts, designed for how
               students actually hydrate from freshman orientation to graduation.
             </p>
           </div>
@@ -221,7 +223,9 @@ export function CampusSection({
               <span className="campus-stat-lbl">Plastic bottles replaced per degree</span>
             </div>
             <div className="campus-stat-item">
-              <span className="campus-stat-val tabular-nums">$1,200+</span>
+              <span className="campus-stat-val tabular-nums">
+                {formatPrice(1200)}+
+              </span>
               <span className="campus-stat-lbl">Saved vs. campus vending machines</span>
             </div>
             <div className="campus-stat-item">
@@ -288,7 +292,11 @@ export function CampusSection({
                 <p className="campus-story-desc">{story.body}</p>
                 <ul className="campus-highlights">
                   {story.highlights.map((item) => (
-                    <li key={item}>{item}</li>
+                    <li key={item}>
+                      {item === 'Saves ~$300/year vs. bottled packs'
+                        ? `Saves ${formatPrice(300, { approx: true })}/year vs. bottled packs`
+                        : item}
+                    </li>
                   ))}
                 </ul>
                 <button
@@ -323,7 +331,7 @@ export function CampusSection({
                 <article key={bundle.id} className="bundle-card">
                   <div className="bundle-card-top">
                     <span className="bundle-kicker tabular-nums">
-                      3-Piece Student Kit · Save ${savings}
+                      3-Piece Student Kit · Save {formatPrice(savings)}
                     </span>
                     <h4 className="bundle-title">{bundle.name}</h4>
                     <p className="bundle-subtitle">{bundle.subtitle}</p>
@@ -337,9 +345,11 @@ export function CampusSection({
 
                   <div className="bundle-footer">
                     <div className="bundle-pricing tabular-nums">
-                      <span className="bundle-price">${bundle.bundlePrice}</span>
+                      <span className="bundle-price">
+                        {formatPrice(bundle.bundlePrice)}
+                      </span>
                       <span className="bundle-reg-price">
-                        ${bundle.regularPrice}
+                        {formatPrice(bundle.regularPrice)}
                       </span>
                     </div>
                     <button
@@ -363,7 +373,7 @@ export function CampusSection({
             <p>
               Verify your <code>.edu</code> or <code>.ac</code> campus address
               to automatically apply a 15% student discount in your Waterholic
-              bag — works on all bottles, dorm filter pitchers, and packs.
+              bag. Works on all bottles, dorm filter pitchers, and packs.
             </p>
           </div>
 

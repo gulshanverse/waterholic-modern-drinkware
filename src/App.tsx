@@ -50,6 +50,14 @@ import {
   type ThemeMode,
 } from './utils/circadianTheme';
 import { useAuth } from './contexts/AuthContext';
+import { CurrencyProvider } from './contexts/CurrencyContext';
+import {
+  DEFAULT_COUNTRY_CODE,
+  formatCurrencyPrice,
+  getCountryCurrency,
+  normalizeCountryCode,
+  type CountryCode,
+} from './utils/currency';
 import {
   Check,
   ChevronLeft,
@@ -122,6 +130,7 @@ const DEFAULT_PROFILE: UserProfile = {
   phone: '(303) 555-0194',
   university: 'State University',
   preferredColor: 'Ocean Blue',
+  country: DEFAULT_COUNTRY_CODE,
   dailyGoalMl: 2500,
   memberSince: 'Nov 2026',
   signedIn: true,
@@ -334,9 +343,17 @@ export default function App() {
     }).email
   );
 
-  const [profile, setProfile] = useState<UserProfile>(() =>
-    readStored<UserProfile>('wh_profile_v1', DEFAULT_PROFILE)
-  );
+  const [profile, setProfile] = useState<UserProfile>(() => {
+    const stored = readStored<Partial<UserProfile>>(
+      'wh_profile_v1',
+      DEFAULT_PROFILE
+    );
+    return {
+      ...DEFAULT_PROFILE,
+      ...stored,
+      country: normalizeCountryCode(stored.country),
+    };
+  });
   const [addresses, setAddresses] = useState<SavedAddress[]>(() =>
     readStored<SavedAddress[]>('wh_addresses_v1', DEFAULT_ADDRESSES)
   );
@@ -730,6 +747,9 @@ export default function App() {
             ...profileDoc.profile,
             name: profileDoc.profile.name || user.displayName || prev.name,
             email: profileDoc.profile.email || user.email || prev.email,
+            country: normalizeCountryCode(
+              profileDoc.profile.country ?? prev.country
+            ),
             signedIn: true,
           }));
           if (profileDoc.savedIds.length > 0) {
@@ -1352,7 +1372,7 @@ export default function App() {
       void navigator.clipboard.writeText(code).catch(() => {});
     }
     setPromoCopied(true);
-    showToast('Copied code WATER10 — apply in your bag for 10% off');
+    showToast('Copied code WATER10. Apply it in your bag for 10% off.');
     window.setTimeout(() => setPromoCopied(false), 2400);
   }, [showToast]);
 
@@ -1614,7 +1634,8 @@ export default function App() {
 
   const handleUpdateProfile = useCallback(
     (next: UserProfile) => {
-      setProfile(next);
+      const normalizedCountry = normalizeCountryCode(next.country);
+      setProfile({ ...next, country: normalizedCountry });
       const emailLower = next.email.trim().toLowerCase();
       if (
         emailLower.endsWith('.edu') ||
@@ -1625,6 +1646,18 @@ export default function App() {
         setStudentDiscountActive(true);
       }
       showToast('Web profile updated');
+    },
+    [showToast]
+  );
+
+  const handleChangeCountry = useCallback(
+    (nextCode: CountryCode) => {
+      const normalized = normalizeCountryCode(nextCode);
+      const spec = getCountryCurrency(normalized);
+      setProfile((prev) => ({ ...prev, country: normalized }));
+      showToast(
+        `Prices updated to ${spec.countryName} (${spec.currencyCode} · ${spec.symbol.trim()})`
+      );
     },
     [showToast]
   );
@@ -1776,7 +1809,7 @@ export default function App() {
         ...prev,
         [productId]: [newRev, ...(prev[productId] ?? [])],
       }));
-      showToast('Thank you — your review is now live');
+      showToast('Thank you! Your review is now live.');
     },
     [showToast]
   );
@@ -1844,7 +1877,10 @@ export default function App() {
   };
 
   return (
-    <>
+    <CurrencyProvider
+      countryCode={profile.country}
+      onChangeCountry={handleChangeCountry}
+    >
       <div className="scroll-progress-track" aria-hidden="true">
         <div ref={scrollProgressRef} className="scroll-progress-bar" />
       </div>
@@ -1864,7 +1900,7 @@ export default function App() {
               <span className="launch-ribbon-dot" aria-hidden="true" />
               <span className="launch-ribbon-text">
                 <strong>Global Launch Edition</strong> · Free Laser Monogramming
-                &amp; Express Shipping $60+
+                &amp; Express Shipping {formatCurrencyPrice(60, profile.country)}+
               </span>
               <button
                 type="button"
@@ -1960,7 +1996,7 @@ export default function App() {
               className="concierge-nav-btn"
               onClick={() => setConciergeOpen(true)}
               aria-label="Open Waterholic AI Hydration Concierge"
-              title="Waterholic AI Concierge — Chat, Voice & Local Refills"
+              title="Waterholic AI Concierge: Chat, Voice & Local Refills"
             >
               <svg
                 className="concierge-nav-emblem"
@@ -2043,7 +2079,7 @@ export default function App() {
                 }
                 showToast(
                   next
-                    ? `Atmospheric soundscape on — ${DAYPART_META[activeDaypart].soundscapeName}`
+                    ? `Atmospheric soundscape on: ${DAYPART_META[activeDaypart].soundscapeName}`
                     : 'Atmospheric soundscape muted'
                 );
               }}
@@ -2120,7 +2156,7 @@ export default function App() {
                       setThemeMode('auto');
                       setThemeMenuOpen(false);
                       showToast(
-                        `Synced to local time — ${DAYPART_META[liveClockDaypart].paletteName} palette`
+                        `Synced to local time (${DAYPART_META[liveClockDaypart].paletteName} palette)`
                       );
                     }}
                   >
@@ -2399,7 +2435,9 @@ export default function App() {
             className="mobile-nav-link"
             onClick={() => setMobileMenuOpen(false)}
           >
-            <span>Curated Ritual Sets (Save $26)</span>
+            <span>
+              Curated Ritual Sets (Save {formatCurrencyPrice(26, profile.country)})
+            </span>
             <span aria-hidden="true">→</span>
           </a>
           <a
@@ -2512,7 +2550,7 @@ export default function App() {
               <h1 className="hero-title">Pure hydration, engineered to flow.</h1>
               <p className="hero-sub">
                 From vacuum-insulated steel bottles and UV-C purifiers to dorm
-                glass pitchers, mineral springs, and clear iceware — explore{' '}
+                glass pitchers, mineral springs, and clear iceware. Explore{' '}
                 {PRODUCTS.length} essentials built for everyday hydration and
                 campus life.
               </p>
@@ -2535,7 +2573,7 @@ export default function App() {
                     }
                     title={
                       isHeroFlagshipSaved
-                        ? `Saved in Wishlist — ${heroFlagshipName}`
+                        ? `Saved in Wishlist: ${heroFlagshipName}`
                         : `Bookmark ${heroFlagshipName}`
                     }
                     data-testid="hero-wishlist-btn"
@@ -2669,7 +2707,7 @@ export default function App() {
           />
         </div>
 
-        {/* SECTION 2.5: Waterholic Campus Edition — Special Use for College Students */}
+        {/* SECTION 2.5: Waterholic Campus Edition (Special Use for College Students) */}
         <CampusSection
           studentDiscountActive={studentDiscountActive}
           studentEmail={studentEmail}
@@ -3167,7 +3205,10 @@ export default function App() {
                 />
                 <div className="order-price-foreground">
                   <p className="order-price tabular-nums" id="order-price">
-                    ${price + (FINISH_META[finish].premiumDelta ?? 0)}
+                    {formatCurrencyPrice(
+                      price + (FINISH_META[finish].premiumDelta ?? 0),
+                      profile.country
+                    )}
                     {finish === 'pink' && (
                       <span className="order-premium-note">
                         {' '}
@@ -3431,7 +3472,7 @@ export default function App() {
                         </span>
                         <span className="order-hydration-float-sub tabular-nums">
                           {dailyPct >= 100
-                            ? 'Daily goal achieved — keep flowing'
+                            ? 'Daily goal achieved! Keep flowing.'
                             : `+1× ${size} refill brings you to ${projectedPct}%`}
                         </span>
                       </div>
@@ -3459,8 +3500,8 @@ export default function App() {
                         {flagshipJustAdded
                           ? 'Added to Bag ✓'
                           : engravingEnabled && engravingText.trim()
-                            ? `Add Engraved Flask — $${price + (FINISH_META[finish].premiumDelta ?? 0)}`
-                            : `Add to Bag — $${price + (FINISH_META[finish].premiumDelta ?? 0)}`}
+                            ? `Add Engraved Flask · ${formatCurrencyPrice(price + (FINISH_META[finish].premiumDelta ?? 0), profile.country)}`
+                            : `Add to Bag · ${formatCurrencyPrice(price + (FINISH_META[finish].premiumDelta ?? 0), profile.country)}`}
                       </span>
                       <span className="order-add-hydration-dial">
                         <HydrationProgressRing
@@ -3484,7 +3525,7 @@ export default function App() {
           defaultName={profile.name}
           defaultEmail={profile.email}
           onNewsletterJoined={() =>
-            showToast('Subscribed — use code WATER10 in your bag for 10% off')
+            showToast('Subscribed! Use code WATER10 in your bag for 10% off.')
           }
         />
       </main>
@@ -3525,7 +3566,7 @@ export default function App() {
         }}
         onOpenQuickView={(product) => handleOpenQuickView(product)}
         onNewsletterJoined={() =>
-          showToast('Subscribed — use code WATER10 in your bag for 10% off')
+          showToast('Subscribed! Use code WATER10 in your bag for 10% off.')
         }
         onShowToast={showToast}
       />
@@ -3542,7 +3583,9 @@ export default function App() {
         onClose={handleCloseQuickView}
         onToggleSave={toggleSaveProduct}
         onAddToBag={handleAddCatalogProduct}
-        onSelectProduct={(nextProduct) => handleOpenQuickView(nextProduct)}
+        onSelectProduct={(nextProduct, finishId) =>
+          handleOpenQuickView(nextProduct, finishId)
+        }
         onShareProduct={(product, finishId) =>
           setShareProductTarget({ productId: product.id, finishId })
         }
@@ -3776,6 +3819,6 @@ export default function App() {
           ↑
         </button>
       )}
-    </>
+    </CurrencyProvider>
   );
 }

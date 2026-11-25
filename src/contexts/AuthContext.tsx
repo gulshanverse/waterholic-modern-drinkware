@@ -34,6 +34,7 @@ import {
   OperationType,
 } from '../lib/firebase';
 import type { HydrationLog, OrderRecord, UserProfile } from '../types/profile';
+import { DEFAULT_COUNTRY_CODE, normalizeCountryCode } from '../utils/currency';
 
 export interface StudioCreationRecord {
   id: string;
@@ -152,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: (u.email || '').slice(0, 180),
           phone: '',
           university: '',
+          country: DEFAULT_COUNTRY_CODE,
           preferredColor: 'Ocean Blue',
           dailyGoalMl: 2500,
           memberSince: new Date().toLocaleDateString('en-US', {
@@ -355,6 +357,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               email: String(d.email ?? user.email ?? ''),
               phone: String(d.phone ?? ''),
               university: String(d.university ?? ''),
+              country: normalizeCountryCode(
+                typeof d.country === 'string' ? d.country : DEFAULT_COUNTRY_CODE
+              ),
               preferredColor: String(d.preferredColor ?? 'Ocean Blue'),
               dailyGoalMl: Number(d.dailyGoalMl ?? 2500),
               memberSince: String(d.memberSince ?? 'Nov 2026'),
@@ -409,6 +414,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: payload.profile.email.slice(0, 180),
             phone: payload.profile.phone.slice(0, 40),
             university: payload.profile.university.slice(0, 120),
+            country: normalizeCountryCode(payload.profile.country),
             preferredColor: payload.profile.preferredColor.slice(0, 60),
             dailyGoalMl: Math.max(
               500,
@@ -426,6 +432,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: payload.profile.email.slice(0, 180),
             phone: payload.profile.phone.slice(0, 40),
             university: payload.profile.university.slice(0, 120),
+            country: normalizeCountryCode(payload.profile.country),
             preferredColor: payload.profile.preferredColor.slice(0, 60),
             dailyGoalMl: Math.max(
               500,

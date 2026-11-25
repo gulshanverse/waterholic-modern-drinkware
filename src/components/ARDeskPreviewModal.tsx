@@ -43,6 +43,7 @@ import {
   type StudioFinishKey,
   type StudioSizeKey,
 } from '../utils/bottle3dSpecs';
+import { useCurrency } from '../contexts/CurrencyContext';
 import { triggerAddToBagHaptic, triggerMicroHapticTick } from '../utils/hapticFeedback';
 
 export type ArPreviewMode = 'desk' | 'camera' | 'qr';
@@ -91,6 +92,7 @@ export function ARDeskPreviewModal({
   onAddConfiguredToBag,
   onNotify,
 }: ARDeskPreviewModalProps) {
+  const { formatPrice } = useCurrency();
   const [mode, setMode] = useState<ArPreviewMode>(initialMode);
   const [deskPreset, setDeskPreset] = useState<DeskScenePreset>('walnut');
   const [showRuler, setShowRuler] = useState<boolean>(true);
@@ -855,7 +857,7 @@ export function ARDeskPreviewModal({
     setCustomPhotoUrl(objUrl);
     setCameraStatus('idle');
     setMode('camera');
-    onNotify?.('Desk photo loaded — drag your bottle to position it');
+    onNotify?.('Desk photo loaded. Drag your bottle to position it.');
     e.target.value = '';
   };
 
@@ -1033,7 +1035,7 @@ export function ARDeskPreviewModal({
               }}
             >
               <ShoppingBag size={15} aria-hidden="true" />
-              <span>Add — ${computedPrice}</span>
+              <span>Add · {formatPrice(computedPrice)}</span>
             </button>
             <button
               type="button"

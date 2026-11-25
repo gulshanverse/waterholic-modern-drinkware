@@ -108,7 +108,7 @@ export const MILESTONE_BADGES: MilestoneBadgeDefinition[] = [
     category: 'volume',
     categoryLabel: 'Cumulative Volume',
     tierLabel: 'Indigo Platinum',
-    description: 'Surpass 25.0 liters total — equivalent to 50 single-use plastic bottles saved.',
+    description: 'Surpass 25.0 liters total, equivalent to 50 single-use plastic bottles saved.',
     targetValue: 25,
     unit: 'L',
     quickActionLabel: '+950 ml Flask',

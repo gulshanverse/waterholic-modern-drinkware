@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Check, ChevronDown, ChevronUp, Gift, Sparkles } from 'lucide-react';
 import type { OrderRecord, SavedAddress, UserProfile } from '../types/profile';
 import { BottleColorImage } from './BottleColorImage';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 export type GiftWrapStyleId =
   | 'none'
@@ -66,7 +67,7 @@ export const GIFT_WRAP_OPTIONS: {
 
 const QUICK_GIFT_NOTES = [
   'Stay hydrated out there!',
-  'Happy Birthday — cheers to crisp sips!',
+  'Happy Birthday! Cheers to crisp sips!',
   'Finals week fuel. You’ve got this!',
 ];
 
@@ -116,6 +117,7 @@ export function BagDrawer({
   onOrderPlaced,
   onViewOrderInProfile,
 }: BagDrawerProps) {
+  const { formatPrice } = useCurrency();
   const [step, setStep] = useState<'bag' | 'checkout' | 'confirmed'>('bag');
   const [customerName, setCustomerName] = useState(profile.name);
   const [contact, setContact] = useState(profile.email);
@@ -431,7 +433,7 @@ export function BagDrawer({
                 <span>Free Express Shipping unlocked</span>
               ) : (
                 <span>
-                  Add <strong>${remainingForFree}</strong> more for Free Express
+                  Add <strong>{formatPrice(remainingForFree)}</strong> more for Free Express
                   Shipping
                 </span>
               )}
@@ -459,7 +461,7 @@ export function BagDrawer({
                   ? 'item'
                   : 'items'}{' '}
                 totaling{' '}
-                <strong className="tabular-nums">${confirmedOrder.total}</strong>{' '}
+                <strong className="tabular-nums">{formatPrice(confirmedOrder.total)}</strong>{' '}
                 ({confirmedOrder.paymentMethod === 'cod'
                   ? 'Cash on Delivery'
                   : 'Card Paid'}).
@@ -624,27 +626,27 @@ export function BagDrawer({
               <div className="checkout-summary-box">
                 <div className="summary-line tabular-nums">
                   <span>Items ({totalCount})</span>
-                  <span>${subtotal}</span>
+                  <span>{formatPrice(subtotal)}</span>
                 </div>
                 {discountAmount > 0 && (
                   <div className="summary-line summary-line-discount tabular-nums">
                     <span>{discountLabel}</span>
-                    <span>-${discountAmount}</span>
+                    <span>-{formatPrice(discountAmount)}</span>
                   </div>
                 )}
                 {giftWrapTotal > 0 && (
                   <div className="summary-line tabular-nums">
                     <span>Gift Wrapping ({giftWrapUnits})</span>
-                    <span>+${giftWrapTotal}</span>
+                    <span>+{formatPrice(giftWrapTotal)}</span>
                   </div>
                 )}
                 <div className="summary-line tabular-nums">
                   <span>Shipping</span>
-                  <span>{shippingCost === 0 ? 'Free' : `$${shippingCost}`}</span>
+                  <span>{shippingCost === 0 ? 'Free' : formatPrice(shippingCost)}</span>
                 </div>
                 <div className="summary-line summary-line-total tabular-nums">
                   <span>Total Due</span>
-                  <span>${grandTotal}</span>
+                  <span>{formatPrice(grandTotal)}</span>
                 </div>
               </div>
             </form>
@@ -707,7 +709,7 @@ export function BagDrawer({
                           </button>
                         </div>
                         <div className="bag-item-meta tabular-nums">
-                          {item.finishName} · {item.sizeLabel} · ${item.price}
+                          {item.finishName} · {item.sizeLabel} · {formatPrice(item.price)}
                         </div>
                         <div className="bag-qty-row">
                           <button
@@ -730,7 +732,7 @@ export function BagDrawer({
                             +
                           </button>
                           <span className="bag-line-total tabular-nums">
-                            ${itemLineTotal}
+                            {formatPrice(itemLineTotal)}
                           </span>
                         </div>
                       </div>
@@ -747,7 +749,7 @@ export function BagDrawer({
                               {item.gift?.giftWrap && item.gift?.message.trim()
                                 ? 'Wrap + Note'
                                 : item.gift?.giftWrap
-                                  ? `+$${itemWrapTotal} Wrap`
+                                  ? `+${formatPrice(itemWrapTotal)} Wrap`
                                   : item.gift?.message.trim()
                                     ? 'Note added'
                                     : 'Free note'}
@@ -801,8 +803,8 @@ export function BagDrawer({
                         <div className="bag-gift-collapsed-summary">
                           {item.gift?.giftWrap && (
                             <span className="gift-mini-tag">
-                              {getGiftWrapLabel(item.gift.wrapStyle)} (+$
-                              {itemWrapTotal})
+                              {getGiftWrapLabel(item.gift.wrapStyle)} (+
+                              {formatPrice(itemWrapTotal)})
                             </span>
                           )}
                           {item.gift?.message.trim() ? (
@@ -811,7 +813,7 @@ export function BagDrawer({
                             </span>
                           ) : (
                             <span className="gift-collapsed-quote">
-                              Complimentary printed card ready — tap Edit to write
+                              Complimentary printed card ready. Tap Edit to write
                               your note.
                             </span>
                           )}
@@ -835,8 +837,8 @@ export function BagDrawer({
                               <span className="gift-wrap-check-copy">
                                 <strong>Add Waterholic Gift Wrapping</strong>
                                 <span>
-                                  Eco presentation box + ribbon (+$
-                                  {GIFT_WRAP_UNIT_FEE} / unit)
+                                  Eco presentation box + ribbon (+
+                                  {formatPrice(GIFT_WRAP_UNIT_FEE)} / unit)
                                 </span>
                               </span>
                             </label>
@@ -1018,29 +1020,29 @@ export function BagDrawer({
             <div className="drawer-breakdown">
               <div className="drawer-sub-row tabular-nums">
                 <span>Subtotal</span>
-                <span>${subtotal}</span>
+                <span>{formatPrice(subtotal)}</span>
               </div>
               {discountAmount > 0 && (
                 <div className="drawer-sub-row summary-line-discount tabular-nums">
                   <span>{discountLabel}</span>
-                  <span>-${discountAmount}</span>
+                  <span>-{formatPrice(discountAmount)}</span>
                 </div>
               )}
               {giftWrapTotal > 0 && (
                 <div className="drawer-sub-row tabular-nums">
                   <span>Gift Wrapping ({giftWrapUnits})</span>
-                  <span>+${giftWrapTotal}</span>
+                  <span>+{formatPrice(giftWrapTotal)}</span>
                 </div>
               )}
               <div className="drawer-sub-row tabular-nums">
                 <span>Shipping</span>
-                <span>{shippingCost === 0 ? 'Free' : `$${shippingCost}`}</span>
+                <span>{shippingCost === 0 ? 'Free' : formatPrice(shippingCost)}</span>
               </div>
             </div>
             <div className="drawer-total-row">
               <span>Total</span>
               <span className="drawer-total tabular-nums" id="drawer-total">
-                ${grandTotal}
+                {formatPrice(grandTotal)}
               </span>
             </div>
             <button
@@ -1061,7 +1063,7 @@ export function BagDrawer({
               form="checkout-form"
               className="btn btn-primary btn-full"
             >
-              Confirm Order — ${grandTotal}
+              Confirm Order · {formatPrice(grandTotal)}
             </button>
           </div>
         )}

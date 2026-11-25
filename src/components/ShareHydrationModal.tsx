@@ -3,6 +3,7 @@ import { Check, Copy, Link2 } from 'lucide-react';
 import { CATEGORY_MAP, PRODUCTS, type Product } from '../data/products';
 import type { HydrationLog, UserProfile } from '../types/profile';
 import { getRecoloredBottleUrl } from '../utils/recolorBottle';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 export type ShareMode = 'progress' | 'product';
 type ShareAspect = 'square' | 'portrait';
@@ -234,6 +235,7 @@ export function ShareHydrationModal({
   memberTier,
   onClose,
 }: ShareHydrationModalProps) {
+  const { formatPrice } = useCurrency();
   const [mode, setMode] = useState<ShareMode>(initialMode);
   const [aspect, setAspect] = useState<ShareAspect>('square');
   const [paletteId, setPaletteId] = useState<SharePaletteId>('glacial');
@@ -761,7 +763,7 @@ export function ShareHydrationModal({
       ctx.textAlign = 'right';
       ctx.fillStyle = pal.textPrimary;
       ctx.font = '600 42px "Plus Jakarta Sans", "IBM Plex Sans", sans-serif';
-      ctx.fillText(`$${selectedProduct.price}`, width - pad, infoTop + 10);
+      ctx.fillText(formatPrice(selectedProduct.price), width - pad, infoTop + 10);
 
       // Product Title
       ctx.textAlign = 'left';
@@ -858,6 +860,7 @@ export function ShareHydrationModal({
     loadedImg,
     caption,
     shortProductLinkLabel,
+    formatPrice,
   ]);
 
   useEffect(() => {
@@ -915,7 +918,7 @@ export function ShareHydrationModal({
   const handleCopyImage = async () => {
     const blob = await getCanvasBlob();
     if (!blob) {
-      showFeedback('Could not generate image — try Download PNG');
+      showFeedback('Could not generate image. Try Download PNG.');
       return;
     }
 
@@ -935,7 +938,7 @@ export function ShareHydrationModal({
       // Fallback below when iframe blocks clipboard image write
     }
 
-    showFeedback('Clipboard blocked by browser — use Download PNG');
+    showFeedback('Clipboard blocked by browser. Use Download PNG.');
   };
 
   const handleCopyProductLink = async () => {
@@ -962,7 +965,7 @@ export function ShareHydrationModal({
       }, 2400);
       showFeedback('Direct product link copied to clipboard');
     } catch {
-      showFeedback('Could not copy automatically — select the product link above');
+      showFeedback('Could not copy automatically. Select the product link above.');
     }
   };
 
@@ -975,7 +978,7 @@ export function ShareHydrationModal({
     const shareTitle =
       mode === 'progress'
         ? 'Waterholic Hydration Card'
-        : `${selectedProduct.name} — Waterholic`;
+        : `${selectedProduct.name} | Waterholic`;
     const shareText =
       mode === 'progress'
         ? `I'm at ${hydrationPct}% (${hydration.consumedMl} ml / ${profile.dailyGoalMl} ml) of my daily hydration goal with Waterholic!`
@@ -1123,8 +1126,8 @@ export function ShareHydrationModal({
                     {selectableProducts.currentExtra && (
                       <optgroup label="Currently Viewing">
                         <option value={selectableProducts.currentExtra.id}>
-                          {selectableProducts.currentExtra.name} ($
-                          {selectableProducts.currentExtra.price})
+                          {selectableProducts.currentExtra.name} (
+                          {formatPrice(selectableProducts.currentExtra.price)})
                         </option>
                       </optgroup>
                     )}
@@ -1132,7 +1135,7 @@ export function ShareHydrationModal({
                       <optgroup label="Your Saved Wishlist">
                         {selectableProducts.saved.map((p) => (
                           <option key={p.id} value={p.id}>
-                            {p.name} (${p.price})
+                            {p.name} ({formatPrice(p.price)})
                           </option>
                         ))}
                       </optgroup>
@@ -1140,7 +1143,7 @@ export function ShareHydrationModal({
                     <optgroup label="Featured Waterholic">
                       {selectableProducts.featured.map((p) => (
                         <option key={p.id} value={p.id}>
-                          {p.name} (${p.price})
+                          {p.name} ({formatPrice(p.price)})
                         </option>
                       ))}
                     </optgroup>
@@ -1149,7 +1152,7 @@ export function ShareHydrationModal({
 
                 <div className="share-control-group">
                   <span className="share-control-label">
-                    Finish — {activeFinish?.name}
+                    Finish: {activeFinish?.name}
                   </span>
                   <div className="share-finish-row" role="radiogroup" aria-label="Select product finish">
                     {selectedProduct.finishes.map((fin, idx) => (

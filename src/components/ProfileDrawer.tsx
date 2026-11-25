@@ -22,7 +22,13 @@ import {
   type MilestoneBadgeId,
 } from '../utils/hydrationMilestones';
 import { useAuth } from '../contexts/AuthContext';
-import { Cloud, Gift, LogIn, LogOut } from 'lucide-react';
+import { useCurrency } from '../contexts/CurrencyContext';
+import {
+  COUNTRY_CURRENCIES,
+  normalizeCountryCode,
+  type CountryCode,
+} from '../utils/currency';
+import { Cloud, Gift, Globe, LogIn, LogOut } from 'lucide-react';
 import { triggerAddToBagHaptic } from '../utils/hapticFeedback';
 
 export type ProfileTab = 'overview' | 'orders' | 'addresses' | 'wishlist';
@@ -79,6 +85,7 @@ export function ProfileDrawer({
   onReorderItems,
 }: ProfileDrawerProps) {
   const { user, authLoading, authError, signInWithGoogle, signOutUser } = useAuth();
+  const { countryCode, currency, setCountryCode, formatPrice } = useCurrency();
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab ?? 'overview');
   const [editingProfile, setEditingProfile] = useState(false);
   const [draftProfile, setDraftProfile] = useState<UserProfile>(profile);
@@ -128,6 +135,7 @@ export function ProfileDrawer({
     onUpdateProfile({
       ...draftProfile,
       name: draftProfile.name.trim() || 'Waterholic Member',
+      country: normalizeCountryCode(draftProfile.country),
       dailyGoalMl: Math.max(1000, Math.min(6000, Number(draftProfile.dailyGoalMl) || 2500)),
       signedIn: true,
     });
@@ -201,6 +209,10 @@ export function ProfileDrawer({
                 <span>{memberTier}</span>
                 <span aria-hidden="true">·</span>
                 <span className="tabular-nums">{unlockedMedalCount}/6 Medals</span>
+                <span aria-hidden="true">·</span>
+                <span className="tabular-nums">
+                  {currency.countryName} ({currency.symbol.trim()} {currency.currencyCode})
+                </span>
                 {studentDiscountActive && (
                   <>
                     <span aria-hidden="true">·</span>
@@ -516,6 +528,26 @@ export function ProfileDrawer({
                       />
                     </div>
                     <div className="form-field">
+                      <label htmlFor="prof-country">Country &amp; Pricing Currency</label>
+                      <select
+                        id="prof-country"
+                        className="filter-select"
+                        value={normalizeCountryCode(draftProfile.country)}
+                        onChange={(e) =>
+                          setDraftProfile({
+                            ...draftProfile,
+                            country: normalizeCountryCode(e.target.value),
+                          })
+                        }
+                      >
+                        {COUNTRY_CURRENCIES.map((c) => (
+                          <option key={c.code} value={c.code}>
+                            {c.countryName} ({c.symbol.trim()} {c.currencyCode})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-field">
                       <label htmlFor="prof-color">Preferred Bottle Colour</label>
                       <select
                         id="prof-color"
@@ -550,28 +582,54 @@ export function ProfileDrawer({
                     </div>
                   </form>
                 ) : (
-                  <div className="modal-specs-table">
-                    <div className="modal-spec-row">
-                      <span>Email</span>
-                      <span>{profile.email}</span>
+                  <>
+                    <div className="profile-country-switcher">
+                      <label
+                        htmlFor="prof-quick-country"
+                        className="profile-country-label"
+                      >
+                        <Globe size={14} aria-hidden="true" />
+                        <span>Country &amp; Currency</span>
+                      </label>
+                      <select
+                        id="prof-quick-country"
+                        className="filter-select profile-country-select"
+                        aria-label="Select country and pricing currency"
+                        value={countryCode}
+                        onChange={(e) =>
+                          setCountryCode(e.target.value as CountryCode)
+                        }
+                      >
+                        {COUNTRY_CURRENCIES.map((c) => (
+                          <option key={c.code} value={c.code}>
+                            {c.countryName} ({c.symbol.trim()} {c.currencyCode})
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                    <div className="modal-spec-row">
-                      <span>Phone</span>
-                      <span className="tabular-nums">{profile.phone || 'Not set'}</span>
+                    <div className="modal-specs-table">
+                      <div className="modal-spec-row">
+                        <span>Email</span>
+                        <span>{profile.email}</span>
+                      </div>
+                      <div className="modal-spec-row">
+                        <span>Phone</span>
+                        <span className="tabular-nums">{profile.phone || 'Not set'}</span>
+                      </div>
+                      <div className="modal-spec-row">
+                        <span>Campus</span>
+                        <span>{profile.university || 'Not set'}</span>
+                      </div>
+                      <div className="modal-spec-row">
+                        <span>Preferred Colour</span>
+                        <span>{profile.preferredColor}</span>
+                      </div>
+                      <div className="modal-spec-row">
+                        <span>Member Since</span>
+                        <span>{profile.memberSince}</span>
+                      </div>
                     </div>
-                    <div className="modal-spec-row">
-                      <span>Campus</span>
-                      <span>{profile.university || 'Not set'}</span>
-                    </div>
-                    <div className="modal-spec-row">
-                      <span>Preferred Colour</span>
-                      <span>{profile.preferredColor}</span>
-                    </div>
-                    <div className="modal-spec-row">
-                      <span>Member Since</span>
-                      <span>{profile.memberSince}</span>
-                    </div>
-                  </div>
+                  </>
                 )}
               </div>
             </div>
@@ -618,7 +676,7 @@ export function ProfileDrawer({
                         <div className="profile-muted">{order.date}</div>
                       </div>
                       <span className="order-history-total tabular-nums">
-                        ${order.total}
+                        {formatPrice(order.total)}
                       </span>
                     </div>
 
@@ -654,7 +712,7 @@ export function ProfileDrawer({
                               <span>
                                 {item.qty}× {item.name} ({item.finishName})
                               </span>
-                              <span>${item.price * item.qty + wrapFee}</span>
+                              <span>{formatPrice(item.price * item.qty + wrapFee)}</span>
                             </div>
                             {hasGift && item.gift && (
                               <div className="order-mini-gift">
@@ -667,7 +725,7 @@ export function ProfileDrawer({
                                     ? ` · To ${item.gift.recipientName.trim()}`
                                     : ''}
                                   {item.gift.message?.trim()
-                                    ? ` — “${item.gift.message.trim()}”`
+                                    ? `: “${item.gift.message.trim()}”`
                                     : ''}
                                 </span>
                               </div>
@@ -852,8 +910,8 @@ export function ProfileDrawer({
                           </button>
                         </div>
                         <div className="bag-item-meta tabular-nums">
-                          {CATEGORY_MAP[product.category].shortName} · $
-                          {product.price}
+                          {CATEGORY_MAP[product.category].shortName} ·{' '}
+                          {formatPrice(product.price)}
                         </div>
                         <div className="wishlist-row-actions">
                           <button

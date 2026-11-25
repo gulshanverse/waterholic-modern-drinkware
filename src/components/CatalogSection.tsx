@@ -24,6 +24,7 @@ import {
   triggerMicroHapticTick,
   triggerSwipeUpAddHaptic,
 } from '../utils/hapticFeedback';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 const SWIPE_UP_THRESHOLD = 44;
 const SWIPE_UP_MAX_PULL = 68;
@@ -176,6 +177,7 @@ function ProductCard({
   onQuickView: (product: Product, finishId: string) => void;
   onAddToBag: (payload: AddToBagPayload) => void;
 }) {
+  const { formatPrice } = useCurrency();
   const [selectedFinishIdx, setSelectedFinishIdx] = useState(0);
   const [imgError, setImgError] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
@@ -490,7 +492,7 @@ function ProductCard({
                 {!imgError ? (
                   <BottleColorImage
                     src={product.image}
-                    alt={`${product.name} — ${product.variety} in ${activeFinish.name}`}
+                    alt={`${product.name}, ${product.variety} in ${activeFinish.name}`}
                     finish={activeFinish}
                     loading="lazy"
                     draggable={false}
@@ -734,7 +736,7 @@ function ProductCard({
         </div>
 
         <div className="product-card-footer">
-          <span className="product-price tabular-nums">${unitPrice}</span>
+          <span className="product-price tabular-nums">{formatPrice(unitPrice)}</span>
           <div className="product-card-actions">
             <motion.button
               type="button"
@@ -793,6 +795,7 @@ export function CatalogSection({
   onLogWater,
   onOpenHydrationDrawer,
 }: CatalogSectionProps) {
+  const { formatPrice } = useCurrency();
   const [selectedVariety, setSelectedVariety] = useState<string>('all');
   const [selectedMaterial, setSelectedMaterial] = useState<string>('all');
   const [priceRange, setPriceRange] = useState<PriceRange>('all');
@@ -1023,7 +1026,7 @@ export function CatalogSection({
             <p className="catalog-sub">
               {activeCategoryMeta
                 ? activeCategoryMeta.tagline
-                : `Explore ${PRODUCTS.length} water-focused essentials across ${CATEGORIES.length} specialized categories — from vacuum alpine flasks to UV-C purifiers, mineral springs, and precision iceware.`}
+                : `Explore ${PRODUCTS.length} water-focused essentials across ${CATEGORIES.length} specialized categories, from vacuum alpine flasks to UV-C purifiers, mineral springs, and precision iceware.`}
             </p>
           </div>
           <div className="catalog-summary-stat tabular-nums">
@@ -1031,7 +1034,7 @@ export function CatalogSection({
             <span aria-hidden="true">·</span>
             <span>{CATEGORIES.length} Categories</span>
             <span aria-hidden="true">·</span>
-            <span>Free Shipping $60+</span>
+            <span>Free Shipping {formatPrice(60)}+</span>
           </div>
         </div>
 
@@ -1164,10 +1167,10 @@ export function CatalogSection({
                 onChange={(e) => setPriceRange(e.target.value as PriceRange)}
               >
                 <option value="all">Any Price</option>
-                <option value="under25">Under $25</option>
-                <option value="25to60">$25 – $60</option>
-                <option value="60to120">$60 – $120</option>
-                <option value="over120">$120+</option>
+                <option value="under25">Under {formatPrice(25)}</option>
+                <option value="25to60">{formatPrice(25)} – {formatPrice(60)}</option>
+                <option value="60to120">{formatPrice(60)} – {formatPrice(120)}</option>
+                <option value="over120">{formatPrice(120)}+</option>
               </select>
             </label>
 
@@ -1275,7 +1278,7 @@ export function CatalogSection({
                   <span className="recent-chip-info">
                     <span className="recent-chip-name">{item.name}</span>
                     <span className="recent-chip-price tabular-nums">
-                      ${item.price}
+                      {formatPrice(item.price)}
                     </span>
                   </span>
                 </button>

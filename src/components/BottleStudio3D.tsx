@@ -37,6 +37,7 @@ import {
   checkWebXrArSupport,
   requestWebXrArSession,
 } from '../utils/webxrSupport';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 export type StudioFinishKey =
   | 'blue'
@@ -429,6 +430,7 @@ export function BottleStudio3D({
   initialShowBoot,
   onConsumeAutoOpenAr,
 }: BottleStudio3DProps) {
+  const { formatPrice } = useCurrency();
   const mountRef = useRef<HTMLDivElement | null>(null);
   const [studioFinish, setStudioFinish] = useState<StudioFinishKey>(activeFinish);
   const [studioSize, setStudioSize] = useState<StudioSizeKey>(activeSize);
@@ -2143,11 +2145,11 @@ export function BottleStudio3D({
 
       const sizeKb = Math.max(1, Math.round(buffer.byteLength / 1024));
       onSnapshotSaved?.(
-        `Exported ${fileName} (${sizeKb} KB) — AR & 3D ready`
+        `Exported ${fileName} (${sizeKb} KB), ready for AR & 3D`
       );
     } catch (err) {
       console.error('Failed to export 3D GLB:', err);
-      onSnapshotSaved?.('Could not export GLB model — please try again');
+      onSnapshotSaved?.('Could not export GLB model. Please try again.');
     } finally {
       setExportingGlb(false);
     }
@@ -2216,7 +2218,7 @@ export function BottleStudio3D({
       try {
         await sceneApiRef.current.startWebXrSession(xrOverlayRef.current);
         onSnapshotSaved?.(
-          'WebXR AR session started — point at a flat surface and tap to place'
+          'WebXR AR session started. Point at a flat surface and tap to place.'
         );
         return;
       } catch {
@@ -2228,7 +2230,7 @@ export function BottleStudio3D({
 
     setArOverlayMode('camera');
     onSnapshotSaved?.(
-      'AR Camera Overlay active — tap or drag anywhere to place your bottle'
+      'AR Camera Overlay active. Tap or drag anywhere to place your bottle.'
     );
   };
 
@@ -2420,7 +2422,7 @@ export function BottleStudio3D({
               }}
             >
               <ShoppingBag size={16} aria-hidden="true" />
-              <span>Add 3D Build — ${computedPrice}</span>
+              <span>Add 3D Build · {formatPrice(computedPrice)}</span>
               <HydrationProgressRing
                 consumedMl={consumedMl}
                 dailyGoalMl={dailyGoalMl}
@@ -2445,7 +2447,7 @@ export function BottleStudio3D({
             if (inlinePhotoUrl) URL.revokeObjectURL(inlinePhotoUrl);
             setInlinePhotoUrl(URL.createObjectURL(file));
             setInlineCamStatus('idle');
-            onSnapshotSaved?.('Room photo loaded — drag bottle to position it');
+            onSnapshotSaved?.('Room photo loaded. Drag bottle to position it.');
             e.target.value = '';
           }}
         />
@@ -2480,8 +2482,8 @@ export function BottleStudio3D({
             className="studio3d-canvas-host"
             aria-label={
               arOverlayMode !== 'none'
-                ? 'Active AR camera overlay — tap or drag to place your configured Waterholic bottle'
-                : 'Interactive 3D Waterholic bottle viewer — hover or tap bottle components to inspect engineering specs, drag to orbit'
+                ? 'Active AR camera overlay. Tap or drag to place your configured Waterholic bottle.'
+                : 'Interactive 3D Waterholic bottle viewer. Hover or tap bottle components to inspect engineering specs, drag to orbit.'
             }
           />
 
@@ -2504,7 +2506,7 @@ export function BottleStudio3D({
                         ? xrPlaced
                           ? `Placed at 1:1 scale (${physicalHeightCm} cm) · Tap any surface to move`
                           : xrSurfaceFound
-                            ? 'Surface locked — tap anywhere to place your bottle'
+                            ? 'Surface locked. Tap anywhere to place your bottle.'
                             : xrHasHitTest
                               ? 'Point your camera slowly at a flat desk or floor…'
                               : 'Viewing bottle at 1:1 physical scale'

@@ -18,6 +18,7 @@ import { PRODUCTS, type Product } from '../data/products';
 import { BottleColorImage } from './BottleColorImage';
 import { triggerAddToBagHaptic } from '../utils/hapticFeedback';
 import type { AddToBagPayload } from './CatalogSection';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 type RhythmChoice = 'desk' | 'campus' | 'trail' | 'home';
 type PriorityChoice = 'ice' | 'hotcold' | 'purify' | 'ultralight';
@@ -144,6 +145,7 @@ export function BottleFinderModal({
   onQuickView,
   onAddToBag,
 }: BottleFinderModalProps) {
+  const { formatPrice } = useCurrency();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [rhythm, setRhythm] = useState<RhythmChoice | null>(null);
   const [priority, setPriority] = useState<PriorityChoice | null>(null);
@@ -544,7 +546,7 @@ export function BottleFinderModal({
                           </p>
                           <div className="finder-result-price-row tabular-nums">
                             <span className="finder-result-price">
-                              ${rec.product.price}
+                              {formatPrice(rec.product.price)}
                             </span>
                             <span className="finder-result-rating">
                               ★ {rec.product.rating.toFixed(1)}

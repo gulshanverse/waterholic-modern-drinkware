@@ -1,4 +1,5 @@
 import type { BagLineItem } from '../components/BagDrawer';
+import type { CountryCode } from '../utils/currency';
 
 export interface SavedAddress {
   id: string;
@@ -14,6 +15,7 @@ export interface UserProfile {
   email: string;
   phone: string;
   university: string;
+  country: CountryCode;
   preferredColor: string;
   dailyGoalMl: number;
   memberSince: string;

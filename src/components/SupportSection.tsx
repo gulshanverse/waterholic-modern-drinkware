@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 interface SupportSectionProps {
   defaultEmail?: string;
@@ -34,6 +35,7 @@ export function SupportSection({
   defaultName = '',
   onNewsletterJoined,
 }: SupportSectionProps) {
+  const { formatPrice } = useCurrency();
   const [openFaq, setOpenFaq] = useState<number>(0);
   const [supportName, setSupportName] = useState(defaultName);
   const [supportEmail, setSupportEmail] = useState(defaultEmail);
@@ -75,7 +77,7 @@ export function SupportSection({
             <span aria-hidden="true">·</span>
             <span>45-Day Returns</span>
             <span aria-hidden="true">·</span>
-            <span>Free Express $60+</span>
+            <span>Free Express {formatPrice(60)}+</span>
           </div>
         </div>
 
@@ -86,6 +88,10 @@ export function SupportSection({
             <div className="faq-list">
               {FAQS.map((item, idx) => {
                 const isOpen = openFaq === idx;
+                const answerText =
+                  item.q === 'What is the shipping speed and return window?'
+                    ? `Orders over ${formatPrice(60)} qualify automatically for Free Express Shipping (2–4 business days). Unused gear can be returned or exchanged for another colour within 45 days at zero restocking fee.`
+                    : item.a;
                 return (
                   <div key={item.q} className="faq-item">
                     <button
@@ -99,7 +105,7 @@ export function SupportSection({
                         {isOpen ? '−' : '+'}
                       </span>
                     </button>
-                    {isOpen && <p className="faq-answer">{item.a}</p>}
+                    {isOpen && <p className="faq-answer">{answerText}</p>}
                   </div>
                 );
               })}

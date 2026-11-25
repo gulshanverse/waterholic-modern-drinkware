@@ -1,11 +1,21 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp, Heart, Share2, Star, ThumbsUp } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ArrowUpRight,
+  ChevronDown,
+  ChevronUp,
+  Heart,
+  Share2,
+  Star,
+  ThumbsUp,
+} from 'lucide-react';
 import { CATEGORY_MAP, PRODUCTS, type Product } from '../data/products';
 import type { ProductReview } from '../types/profile';
 import type { AddToBagPayload } from './CatalogSection';
 import { BottleColorImage } from './BottleColorImage';
 import { ProductModalSkeleton } from './ShimmerSkeletons';
 import { triggerAddToBagHaptic } from '../utils/hapticFeedback';
+import { getRecommendedProducts } from '../utils/productRecommendations';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 interface ProductModalProps {
   product: Product | null;
@@ -17,7 +27,7 @@ interface ProductModalProps {
   onClose: () => void;
   onToggleSave: (productId: string) => void;
   onAddToBag: (payload: AddToBagPayload) => void;
-  onSelectProduct: (product: Product) => void;
+  onSelectProduct: (product: Product, finishId?: string) => void;
   onShareProduct?: (product: Product, finishId: string) => void;
   onSubmitReview: (
     productId: string,
@@ -115,7 +125,7 @@ function buildProductReviews(product: Product): RichProductReview[] {
       date: 'Aug 2026',
       rating: 5,
       helpfulBase: 36,
-      comment: `Gifted the ${product.name} to my roommate and ended up ordering one for myself the same week. Every detail—from the wide grip to ${spec}—feels thoughtfully engineered instead of flimsy.`,
+      comment: `Gifted the ${product.name} to my roommate and ended up ordering one for myself the same week. Every detail, from the wide grip to ${spec}, feels thoughtfully engineered instead of flimsy.`,
     },
     {
       author: 'Noah B.',
@@ -213,6 +223,7 @@ export function ProductModal({
   onShareProduct,
   onSubmitReview,
 }: ProductModalProps) {
+  const { formatPrice } = useCurrency();
   const [finishIdx, setFinishIdx] = useState(0);
   const [sizeIdx, setSizeIdx] = useState(0);
   const [qty, setQty] = useState(1);
@@ -220,7 +231,7 @@ export function ProductModal({
   const [detailHydrating, setDetailHydrating] = useState(false);
   const [modalJustAdded, setModalJustAdded] = useState(false);
 
-  // Review composer state — starts empty (0 stars) so clicking 1..5 fills empty -> golden
+  // Review composer state: starts empty (0 stars) so clicking 1..5 fills empty -> golden
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewAuthor, setReviewAuthor] = useState(defaultAuthor);
   const [reviewRating, setReviewRating] = useState<number>(0);
@@ -239,6 +250,7 @@ export function ProductModal({
   const [helpfulVotedIds, setHelpfulVotedIds] = useState<Set<string>>(
     () => new Set()
   );
+  const modalRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!product) return;
@@ -316,12 +328,14 @@ export function ProductModal({
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [product, onClose]);
 
-  const relatedProducts = useMemo(() => {
+  const selectedFinishId = product
+    ? (product.finishes[finishIdx] ?? product.finishes[0])?.id
+    : undefined;
+
+  const relatedRecommendations = useMemo(() => {
     if (!product) return [];
-    return PRODUCTS.filter(
-      (p) => p.category === product.category && p.id !== product.id
-    ).slice(0, 3);
-  }, [product]);
+    return getRecommendedProducts(product, PRODUCTS, selectedFinishId, 4);
+  }, [product, selectedFinishId]);
 
   const allReviews = useMemo<RichProductReview[]>(() => {
     if (!product) return [];
@@ -419,6 +433,7 @@ export function ProductModal({
       data-lenis-prevent
     >
       <div
+        ref={modalRef}
         className="product-modal"
         role="dialog"
         aria-modal="true"
@@ -533,7 +548,7 @@ export function ProductModal({
             </h2>
 
             <div className="modal-price-rating">
-              <span className="modal-price tabular-nums">${unitPrice}</span>
+              <span className="modal-price tabular-nums">{formatPrice(unitPrice)}</span>
               <span className="modal-rating tabular-nums">
                 <Star
                   size={14}
@@ -550,7 +565,7 @@ export function ProductModal({
             {/* Colour / Finish Selector (6 Colours) */}
             <div className="modal-config-group">
               <span className="config-label">
-                Colour ({product.finishes.length}) — {activeFinish.name}
+                Colour ({product.finishes.length}): {activeFinish.name}
               </span>
               <div className="option-row">
                 {product.finishes.map((fin, idx) => (
@@ -616,7 +631,7 @@ export function ProductModal({
                 className={`btn btn-primary modal-add-btn${modalJustAdded ? ' is-added' : ''}`}
                 onClick={handleAdd}
               >
-                {modalJustAdded ? 'Added to Bag ✓' : `Add to Bag — $${lineTotal}`}
+                {modalJustAdded ? 'Added to Bag ✓' : `Add to Bag · ${formatPrice(lineTotal)}`}
               </button>
 
               <button
@@ -875,32 +890,106 @@ export function ProductModal({
                 </div>
               )}
             </div>
-
-            {/* Related Products in Same Category */}
-            {relatedProducts.length > 0 && (
-              <div className="modal-related">
-                <span className="config-label">
-                  More in {catMeta.shortName}
-                </span>
-                <div className="modal-related-grid">
-                  {relatedProducts.map((rel) => (
-                    <button
-                      key={rel.id}
-                      type="button"
-                      className="related-mini-card"
-                      onClick={() => onSelectProduct(rel)}
-                    >
-                      <span className="related-mini-name">{rel.name}</span>
-                      <span className="related-mini-meta tabular-nums">
-                        {rel.variety} · ${rel.price}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
+        )}
+
+        {/* Visual Multi-Signal Product Recommendations Shelf */}
+        {!isLoading && !detailHydrating && relatedRecommendations.length > 0 && (
+          <section className="modal-related" aria-label="Recommended products">
+            <div className="modal-related-header">
+              <div className="modal-related-heading">
+                <h3 className="modal-related-title">
+                  Recommended for you
+                </h3>
+                <p className="modal-related-subtitle">
+                  Matched by size, material, thermal spec &amp; price, plus smart pairings
+                </p>
+              </div>
+              <span className="modal-related-cat-label">
+                {catMeta.shortName} &amp; Pairings
+              </span>
+            </div>
+
+            <div className="modal-related-grid">
+              {relatedRecommendations.map((rec) => {
+                const rel = rec.product;
+                const imgPos =
+                  rel.imageFocus === 'left'
+                    ? '25% center'
+                    : rel.imageFocus === 'right'
+                      ? '75% center'
+                      : 'center center';
+                return (
+                  <button
+                    key={rel.id}
+                    type="button"
+                    className="related-mini-card"
+                    onClick={() => {
+                      modalRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                      onSelectProduct(rel, rec.matchedFinishId);
+                    }}
+                  >
+                    <div className="related-mini-media">
+                      <img
+                        src={rel.image}
+                        alt={`${rel.name}, ${rel.variety}`}
+                        loading="lazy"
+                        draggable={false}
+                        className="related-mini-img"
+                        style={{ objectPosition: imgPos }}
+                      />
+                      <span
+                        className={`related-mini-reason${rec.kind === 'pairing' ? ' is-pairing' : ''}`}
+                      >
+                        {rec.reason}
+                      </span>
+                    </div>
+
+                    <div className="related-mini-body">
+                      <span className="related-mini-name">{rel.name}</span>
+                      <span className="related-mini-meta">
+                        {rel.variety} · {rel.capacity}
+                      </span>
+
+                      <div className="related-mini-footer">
+                        <div className="related-mini-proof">
+                          <span className="related-mini-rating tabular-nums">
+                            <Star size={12} fill="currentColor" aria-hidden="true" />
+                            {rel.rating.toFixed(1)}
+                          </span>
+                          {rel.finishes.length > 1 && (
+                            <span
+                              className="related-mini-swatches"
+                              aria-label={`${rel.finishes.length} finishes available`}
+                            >
+                              {rel.finishes.slice(0, 4).map((fin) => (
+                                <span
+                                  key={fin.id}
+                                  className={`related-mini-dot${rec.matchedFinishId === fin.id ? ' is-matched' : ''}`}
+                                  style={{ backgroundColor: fin.hex }}
+                                  aria-hidden="true"
+                                />
+                              ))}
+                            </span>
+                          )}
+                        </div>
+
+                        <span className="related-mini-price tabular-nums">
+                          {formatPrice(rel.price)}
+                          <ArrowUpRight
+                            size={14}
+                            className="related-mini-arrow"
+                            aria-hidden="true"
+                          />
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
         )}
       </div>
     </div>
