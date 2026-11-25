@@ -1961,10 +1961,47 @@ export default function App() {
               className="concierge-nav-btn"
               onClick={() => setConciergeOpen(true)}
               aria-label="Open Waterholic AI Hydration Concierge"
-              title="AI Concierge, Search & Maps Grounding, Live Voice"
+              title="Waterholic AI Concierge — Chat, Voice & Local Refills"
             >
-              <Sparkles size={15} aria-hidden="true" />
-              <span>AI Concierge</span>
+              <span className="concierge-nav-orb" aria-hidden="true">
+                <svg
+                  className="concierge-nav-emblem"
+                  viewBox="0 0 32 32"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <defs>
+                    <linearGradient
+                      id="whNavConciergeGrad"
+                      x1="6"
+                      y1="4"
+                      x2="26"
+                      y2="28"
+                      gradientUnits="userSpaceOnUse"
+                    >
+                      <stop offset="0%" stopColor="#7DD3FC" />
+                      <stop offset="55%" stopColor="#A5B4FC" />
+                      <stop offset="100%" stopColor="#F8FAFC" />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    d="M16 4.5C16 4.5 8.6 13.1 8.6 19.1C8.6 23.35 11.91 26.8 16 26.8C20.09 26.8 23.4 23.35 23.4 19.1C23.4 13.1 16 4.5 16 4.5Z"
+                    stroke="url(#whNavConciergeGrad)"
+                    strokeWidth="2.3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M12.7 19.3V17.4M16 21.5V15.1M19.3 19.3V17.4"
+                    stroke="url(#whNavConciergeGrad)"
+                    strokeWidth="2.3"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>
+              <span className="concierge-nav-label">Concierge</span>
+              <span className="concierge-nav-tag">AI</span>
             </button>
 
             <button
@@ -3664,16 +3701,64 @@ export default function App() {
         onShowToast={showToast}
       />
 
-      {/* Floating AI Concierge Launcher */}
+      {/* Floating Circular AI Concierge Orb Launcher */}
       {!conciergeOpen && (
         <button
           type="button"
           className="concierge-fab"
           aria-label="Open Waterholic AI Concierge"
+          title="Waterholic AI Concierge"
           onClick={() => setConciergeOpen(true)}
         >
-          <Sparkles size={18} aria-hidden="true" />
-          <span>AI Concierge</span>
+          <span className="concierge-fab-ring" aria-hidden="true" />
+          <span className="concierge-fab-core" aria-hidden="true">
+            <svg
+              className="concierge-fab-emblem"
+              viewBox="0 0 32 32"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <defs>
+                <linearGradient
+                  id="whConciergeGrad"
+                  x1="6"
+                  y1="4"
+                  x2="26"
+                  y2="28"
+                  gradientUnits="userSpaceOnUse"
+                >
+                  <stop offset="0%" stopColor="#7DD3FC" />
+                  <stop offset="52%" stopColor="#A5B4FC" />
+                  <stop offset="100%" stopColor="#F0F9FF" />
+                </linearGradient>
+              </defs>
+              {/* Architectural water droplet vessel */}
+              <path
+                d="M16 4.2C16 4.2 8.2 13.1 8.2 19.2C8.2 23.62 11.69 27.2 16 27.2C20.31 27.2 23.8 23.62 23.8 19.2C23.8 13.1 16 4.2 16 4.2Z"
+                stroke="url(#whConciergeGrad)"
+                strokeWidth="2.1"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              {/* Precision AI voice & hydration pulse bars inside droplet */}
+              <path
+                d="M12.6 19.4V17.4M16 21.8V14.8M19.4 19.4V17.4"
+                stroke="url(#whConciergeGrad)"
+                strokeWidth="2.1"
+                strokeLinecap="round"
+              />
+              {/* Subtle orbital intelligence arc */}
+              <path
+                d="M5.4 14.2C4.6 16.8 5.2 19.8 6.8 22.1M26.6 14.2C27.4 16.8 26.8 19.8 25.2 22.1"
+                stroke="url(#whConciergeGrad)"
+                strokeOpacity="0.65"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            </svg>
+          </span>
+          <span className="concierge-fab-tooltip">AI Concierge</span>
         </button>
       )}
 

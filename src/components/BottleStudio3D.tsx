@@ -9,18 +9,34 @@ import {
   Camera,
   ChevronDown,
   ChevronUp,
+  ImagePlus,
   Info,
   Layers,
   Loader2,
+  Move,
+  QrCode,
+  RefreshCw,
   RotateCcw,
+  RotateCw,
   Scan,
   ShoppingBag,
+  Smartphone,
   Sparkles,
+  Video,
+  VideoOff,
   X,
 } from 'lucide-react';
 import { HydrationProgressRing } from './HydrationProgressRing';
 import { ARDeskPreviewModal, type ArPreviewMode } from './ARDeskPreviewModal';
-import { triggerAddToBagHaptic } from '../utils/hapticFeedback';
+import {
+  triggerAddToBagHaptic,
+  triggerMicroHapticTick,
+} from '../utils/hapticFeedback';
+import {
+  AR_METER_SCALE,
+  checkWebXrArSupport,
+  requestWebXrArSession,
+} from '../utils/webxrSupport';
 
 export type StudioFinishKey =
   | 'blue'
@@ -433,10 +449,44 @@ export function BottleStudio3D({
   const [resetSpinning, setResetSpinning] = useState<boolean>(false);
   const [arModalOpen, setArModalOpen] = useState<boolean>(false);
   const [arInitialMode, setArInitialMode] = useState<ArPreviewMode>('desk');
+
+  // Native WebXR immersive-ar + Inline Live Camera AR Overlay replacement state
+  const [xrSupported, setXrSupported] = useState<boolean>(false);
+  const [arOverlayMode, setArOverlayMode] = useState<'none' | 'webxr' | 'camera'>('none');
+  const [xrLaunching, setXrLaunching] = useState<boolean>(false);
+  const [xrSurfaceFound, setXrSurfaceFound] = useState<boolean>(false);
+  const [xrPlaced, setXrPlaced] = useState<boolean>(false);
+  const [xrHasHitTest, setXrHasHitTest] = useState<boolean>(true);
+  const [inlineCamStatus, setInlineCamStatus] = useState<
+    'idle' | 'requesting' | 'active' | 'denied' | 'unavailable'
+  >('idle');
+  const [inlineFacingMode, setInlineFacingMode] = useState<'environment' | 'user'>('environment');
+  const [inlinePhotoUrl, setInlinePhotoUrl] = useState<string | null>(null);
+  const [inlineArScale, setInlineArScale] = useState<number>(0.88);
+  const [inlineArPitchDeg, setInlineArPitchDeg] = useState<number>(20);
+  const [inlineArDragging, setInlineArDragging] = useState<boolean>(false);
+
+  const xrOverlayRef = useRef<HTMLDivElement | null>(null);
+  const arVideoRef = useRef<HTMLVideoElement | null>(null);
+  const arPhotoRef = useRef<HTMLImageElement | null>(null);
+  const arPhotoInputRef = useRef<HTMLInputElement | null>(null);
+  const arStreamRef = useRef<MediaStream | null>(null);
+
   const [interactSignal, setInteractSignal] = useState<number>(0);
   const [studioInteracting, setStudioInteracting] = useState<boolean>(false);
   const interactTimerRef = useRef<number | null>(null);
   const resetTimerRef = useRef<number | null>(null);
+
+  // Detect WebXR immersive-ar support safely on mount
+  useEffect(() => {
+    let cancelled = false;
+    checkWebXrArSupport().then((supported) => {
+      if (!cancelled) setXrSupported(supported);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (initialShowBoot !== undefined) {
@@ -444,10 +494,88 @@ export function BottleStudio3D({
     }
   }, [initialShowBoot]);
 
+  const stopInlineCamera = () => {
+    if (arStreamRef.current) {
+      arStreamRef.current.getTracks().forEach((track) => track.stop());
+      arStreamRef.current = null;
+    }
+    if (arVideoRef.current) {
+      arVideoRef.current.srcObject = null;
+    }
+  };
+
+  const startInlineCamera = async (preferred: 'environment' | 'user') => {
+    stopInlineCamera();
+    if (
+      typeof navigator === 'undefined' ||
+      !navigator.mediaDevices ||
+      !navigator.mediaDevices.getUserMedia
+    ) {
+      setInlineCamStatus('unavailable');
+      return;
+    }
+    setInlineCamStatus('requesting');
+    try {
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: preferred },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+      }
+      arStreamRef.current = stream;
+      if (arVideoRef.current) {
+        arVideoRef.current.srcObject = stream;
+        await arVideoRef.current.play().catch(() => undefined);
+      }
+      setInlinePhotoUrl(null);
+      setInlineCamStatus('active');
+    } catch {
+      setInlineCamStatus('denied');
+    }
+  };
+
+  useEffect(() => {
+    if (arOverlayMode !== 'camera') {
+      stopInlineCamera();
+      setInlineCamStatus('idle');
+      return;
+    }
+    if (!inlinePhotoUrl) {
+      void startInlineCamera(inlineFacingMode);
+    }
+    return () => {
+      stopInlineCamera();
+    };
+  }, [arOverlayMode, inlineFacingMode, inlinePhotoUrl]);
+
+  useEffect(() => {
+    return () => {
+      stopInlineCamera();
+      if (inlinePhotoUrl) URL.revokeObjectURL(inlinePhotoUrl);
+    };
+  }, [inlinePhotoUrl]);
+
   useEffect(() => {
     if (!autoOpenArMode) return;
-    setArInitialMode(autoOpenArMode);
-    setArModalOpen(true);
+    if (autoOpenArMode === 'camera') {
+      // Mobile QR deep-link replaces the 3D studio stage directly with the live AR overlay
+      setArOverlayMode('camera');
+      setPinnedPart(null);
+      setHoveredPart(null);
+    } else {
+      setArInitialMode(autoOpenArMode);
+      setArModalOpen(true);
+    }
     onConsumeAutoOpenAr?.();
   }, [autoOpenArMode, onConsumeAutoOpenAr]);
 
@@ -574,6 +702,9 @@ export function BottleStudio3D({
     autoSpin,
     chillMist,
     cameraPreset,
+    arOverlayMode,
+    inlineArScale,
+    inlineArPitchDeg,
   });
 
   const sceneApiRef = useRef<{
@@ -584,8 +715,14 @@ export function BottleStudio3D({
       engFont: 'sans' | 'serif' | 'mono'
     ) => void;
     updateTheme: (t: 'light' | 'dark', dp: 'morning' | 'day' | 'evening') => void;
+    syncArMode: () => void;
+    startWebXrSession: (overlayRoot: HTMLElement | null) => Promise<void>;
+    endWebXrSession: () => Promise<void>;
+    rotateArBottle: (deltaRad: number) => void;
+    resetArPlacement: () => void;
     jumpCamera: (preset: CameraPresetKey) => void;
     capturePng: () => string | null;
+    captureWebGlCanvas: () => HTMLCanvasElement | null;
     exportGlb: () => Promise<ArrayBuffer>;
   } | null>(null);
 
@@ -614,6 +751,9 @@ export function BottleStudio3D({
       autoSpin,
       chillMist,
       cameraPreset,
+      arOverlayMode,
+      inlineArScale,
+      inlineArPitchDeg,
     };
     sceneApiRef.current?.updateFinish(
       studioFinish,
@@ -621,6 +761,7 @@ export function BottleStudio3D({
       studioEngraving,
       engravingFont
     );
+    sceneApiRef.current?.syncArMode();
   }, [
     theme,
     daypart,
@@ -633,6 +774,9 @@ export function BottleStudio3D({
     autoSpin,
     chillMist,
     cameraPreset,
+    arOverlayMode,
+    inlineArScale,
+    inlineArPitchDeg,
   ]);
 
   useEffect(() => {
@@ -648,7 +792,7 @@ export function BottleStudio3D({
 
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
-      alpha: false,
+      alpha: true,
       powerPreference: 'high-performance',
       preserveDrawingBuffer: true,
     });
@@ -665,6 +809,8 @@ export function BottleStudio3D({
       isSoftwareGl ? 1 : Math.min(window.devicePixelRatio || 1, 2)
     );
     renderer.setSize(width, height);
+    renderer.setClearColor(0x000000, 0);
+    renderer.xr.enabled = true;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.08;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -1054,7 +1200,92 @@ export function BottleStudio3D({
       return { partId, coords };
     };
 
+    // WebXR & Inline Camera AR Placement Reticle (real-world meter proportions)
+    const arReticleGroup = new THREE.Group();
+    arReticleGroup.matrixAutoUpdate = false;
+    arReticleGroup.visible = false;
+
+    const arRingGeo = new THREE.RingGeometry(0.056, 0.068, 48);
+    arRingGeo.rotateX(-Math.PI / 2);
+    const arRingMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.9,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    const arRingMesh = new THREE.Mesh(arRingGeo, arRingMat);
+    arReticleGroup.add(arRingMesh);
+
+    const arDotGeo = new THREE.CircleGeometry(0.011, 24);
+    arDotGeo.rotateX(-Math.PI / 2);
+    const arDotMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.92,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    const arDotMesh = new THREE.Mesh(arDotGeo, arDotMat);
+    arDotMesh.position.y = 0.0005;
+    arReticleGroup.add(arDotMesh);
+    scene.add(arReticleGroup);
+
+    // Inline Camera AR surface ring (studio scale, grounded at bottle base)
+    const inlineReticleGeo = new THREE.RingGeometry(0.72, 0.82, 56);
+    inlineReticleGeo.rotateX(-Math.PI / 2);
+    const inlineReticleMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.65,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    const inlineReticle = new THREE.Mesh(inlineReticleGeo, inlineReticleMat);
+    inlineReticle.position.y = 0.008;
+    inlineReticle.visible = false;
+    scene.add(inlineReticle);
+
+    // Pre-allocated math helpers for zero-GC AR drag & WebXR pose decomposition
+    const arGroundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const arHitPoint = new THREE.Vector3();
+    const inlineTargetPos = new THREE.Vector3(0, 0, 0);
+    const xrDecompPos = new THREE.Vector3();
+    const xrDecompQuat = new THREE.Quaternion();
+    const xrDecompScale = new THREE.Vector3();
+    let inlineDragging = false;
+    let inlinePointerId: number | null = null;
+    let xrBottlePlacedLocal = false;
+    let xrSurfaceDetectedLocal = false;
+
+    // Active WebXR session + hit-test state
+    let activeXrSession: XRSession | null = null;
+    let xrHitTestSource: XRHitTestSource | null = null;
+    let xrHitTestRequested = false;
+
     const onCanvasPointerMove = (e: PointerEvent) => {
+      if (stateRef.current.arOverlayMode === 'webxr') return;
+      if (stateRef.current.arOverlayMode === 'camera') {
+        if (!inlineDragging) {
+          renderer.domElement.style.cursor = 'crosshair';
+          return;
+        }
+        const rect = renderer.domElement.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+        pointerNdc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        pointerNdc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointerNdc, camera);
+        if (raycaster.ray.intersectPlane(arGroundPlane, arHitPoint)) {
+          inlineTargetPos.set(
+            THREE.MathUtils.clamp(arHitPoint.x, -3.4, 3.4),
+            0,
+            THREE.MathUtils.clamp(arHitPoint.z, -2.6, 2.6)
+          );
+          renderer.domElement.style.cursor = 'grabbing';
+        }
+        return;
+      }
+
       if (e.pointerType === 'touch' || isOrbitDragging) return;
       const hit = pickPartAtClientPoint(e.clientX, e.clientY);
       if (hit) {
@@ -1076,6 +1307,7 @@ export function BottleStudio3D({
     };
 
     const onCanvasPointerLeave = () => {
+      if (stateRef.current.arOverlayMode !== 'none') return;
       renderer.domElement.style.cursor = 'grab';
       if (hoveredPartRef.current !== null) {
         hoveredPartRef.current = null;
@@ -1084,10 +1316,46 @@ export function BottleStudio3D({
     };
 
     const onCanvasPointerDown = (e: PointerEvent) => {
+      if (stateRef.current.arOverlayMode === 'webxr') return;
+      if (stateRef.current.arOverlayMode === 'camera') {
+        const rect = renderer.domElement.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+        pointerNdc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        pointerNdc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointerNdc, camera);
+        if (raycaster.ray.intersectPlane(arGroundPlane, arHitPoint)) {
+          inlineDragging = true;
+          inlinePointerId = e.pointerId;
+          setInlineArDragging(true);
+          renderer.domElement.setPointerCapture?.(e.pointerId);
+          inlineTargetPos.set(
+            THREE.MathUtils.clamp(arHitPoint.x, -3.4, 3.4),
+            0,
+            THREE.MathUtils.clamp(arHitPoint.z, -2.6, 2.6)
+          );
+          triggerMicroHapticTick();
+        }
+        return;
+      }
       pointerDownPos = { x: e.clientX, y: e.clientY };
     };
 
     const onCanvasPointerUp = (e: PointerEvent) => {
+      if (inlineDragging) {
+        inlineDragging = false;
+        setInlineArDragging(false);
+        if (inlinePointerId !== null) {
+          try {
+            renderer.domElement.releasePointerCapture?.(inlinePointerId);
+          } catch {
+            // Ignore already-released pointer
+          }
+          inlinePointerId = null;
+        }
+        renderer.domElement.style.cursor = 'crosshair';
+        return;
+      }
+      if (stateRef.current.arOverlayMode !== 'none') return;
       if (!pointerDownPos) return;
       const moved = Math.hypot(
         e.clientX - pointerDownPos.x,
@@ -1111,6 +1379,7 @@ export function BottleStudio3D({
     renderer.domElement.addEventListener('pointerleave', onCanvasPointerLeave);
     renderer.domElement.addEventListener('pointerdown', onCanvasPointerDown);
     renderer.domElement.addEventListener('pointerup', onCanvasPointerUp);
+    renderer.domElement.addEventListener('pointercancel', onCanvasPointerUp);
 
     // 10. Chilled Condensation Micro-Droplets (InstancedMesh floating gently around flask)
     const dropCount = 48;
@@ -1177,13 +1446,26 @@ export function BottleStudio3D({
       bodyMat.needsUpdate = true;
 
       bootMat.color.set(spec.bootHex);
-      bottleRoot.scale.set(sz.scaleXZ, sz.scaleY, sz.scaleXZ);
+      const modeNow = stateRef.current.arOverlayMode;
+      if (modeNow === 'webxr') {
+        bottleRoot.scale.set(
+          sz.scaleXZ * AR_METER_SCALE,
+          sz.scaleY * AR_METER_SCALE,
+          sz.scaleXZ * AR_METER_SCALE
+        );
+      } else if (modeNow === 'camera') {
+        const sc = stateRef.current.inlineArScale;
+        bottleRoot.scale.set(sz.scaleXZ * sc, sz.scaleY * sc, sz.scaleXZ * sc);
+      } else {
+        bottleRoot.scale.set(sz.scaleXZ, sz.scaleY, sz.scaleXZ);
+      }
     };
 
     const applyThemeColors = (
       t: 'light' | 'dark',
       dp: 'morning' | 'day' | 'evening'
     ) => {
+      if (stateRef.current.arOverlayMode !== 'none') return;
       const bg = resolveStudioBg(t, dp);
       scene.background = bg.clone();
       scene.fog = new THREE.FogExp2(bg.getHex(), 0.038);
@@ -1200,9 +1482,186 @@ export function BottleStudio3D({
     };
     applyThemeColors(stateRef.current.theme, stateRef.current.daypart);
 
+    const syncArVisualMode = () => {
+      const s = stateRef.current;
+      const sz = SIZE_SPECS[s.studioSize];
+
+      if (s.arOverlayMode === 'webxr') {
+        scene.background = null;
+        scene.fog = null;
+        plinth.visible = false;
+        floor.visible = false;
+        dropsInst.visible = false;
+        inlineReticle.visible = false;
+        controls.enabled = false;
+        bottleRoot.scale.set(
+          sz.scaleXZ * AR_METER_SCALE,
+          sz.scaleY * AR_METER_SCALE,
+          sz.scaleXZ * AR_METER_SCALE
+        );
+        contactShadow.scale.setScalar(AR_METER_SCALE * 1.15);
+        contactShadow.visible = xrBottlePlacedLocal;
+        return;
+      }
+
+      if (s.arOverlayMode === 'camera') {
+        scene.background = null;
+        scene.fog = null;
+        plinth.visible = false;
+        floor.visible = false;
+        dropsInst.visible = false;
+        arReticleGroup.visible = false;
+        inlineReticle.visible = true;
+        bottleRoot.visible = true;
+        controls.enabled = false;
+        camLerpActive = false;
+
+        const pitchRad = THREE.MathUtils.degToRad(s.inlineArPitchDeg);
+        const dist = 6.1;
+        camera.position.set(
+          0,
+          1.2 + Math.sin(pitchRad) * dist,
+          Math.cos(pitchRad) * dist
+        );
+        camera.lookAt(0, 1.35, 0);
+
+        const sc = s.inlineArScale;
+        bottleRoot.scale.set(sz.scaleXZ * sc, sz.scaleY * sc, sz.scaleXZ * sc);
+        contactShadow.visible = true;
+        contactShadow.scale.setScalar(sc * 1.08);
+        inlineReticle.scale.setScalar(sc);
+        return;
+      }
+
+      // Standard 3D Studio mode restoration
+      plinth.visible = true;
+      floor.visible = true;
+      bottleRoot.visible = true;
+      arReticleGroup.visible = false;
+      inlineReticle.visible = false;
+      bottleRoot.position.set(0, 0, 0);
+      bottleRoot.scale.set(sz.scaleXZ, sz.scaleY, sz.scaleXZ);
+      contactShadow.visible = true;
+      contactShadow.position.set(0, 0.003, 0);
+      contactShadow.scale.set(1, 1, 1);
+      controls.enabled = true;
+      applyThemeColors(s.theme, s.daypart);
+    };
+
+    const handleXrSelect = () => {
+      if (!activeXrSession) return;
+      if (arReticleGroup.visible) {
+        arReticleGroup.matrix.decompose(xrDecompPos, xrDecompQuat, xrDecompScale);
+        bottleRoot.position.copy(xrDecompPos);
+        bottleRoot.rotation.set(0, bottleRoot.rotation.y, 0);
+        bottleRoot.visible = true;
+        contactShadow.position.set(xrDecompPos.x, xrDecompPos.y + 0.001, xrDecompPos.z);
+        contactShadow.visible = true;
+        xrBottlePlacedLocal = true;
+        setXrPlaced(true);
+        triggerMicroHapticTick();
+      } else if (!xrBottlePlacedLocal) {
+        // Fallback placement 0.65m directly ahead of viewer if surface hasn't locked yet
+        const xrCam = renderer.xr.getCamera();
+        xrDecompPos.set(0, -0.14, -0.65).applyMatrix4(xrCam.matrixWorld);
+        bottleRoot.position.copy(xrDecompPos);
+        bottleRoot.visible = true;
+        contactShadow.position.set(xrDecompPos.x, xrDecompPos.y + 0.001, xrDecompPos.z);
+        contactShadow.visible = true;
+        xrBottlePlacedLocal = true;
+        setXrPlaced(true);
+        triggerMicroHapticTick();
+      }
+    };
+
+    const cleanupXrSessionState = () => {
+      if (xrHitTestSource) {
+        try {
+          xrHitTestSource.cancel();
+        } catch {
+          // Ignore already cancelled hit-test source
+        }
+        xrHitTestSource = null;
+      }
+      xrHitTestRequested = false;
+      xrBottlePlacedLocal = false;
+      xrSurfaceDetectedLocal = false;
+      activeXrSession = null;
+      arReticleGroup.visible = false;
+      setXrPlaced(false);
+      setXrSurfaceFound(false);
+      setArOverlayMode('none');
+      stateRef.current.arOverlayMode = 'none';
+      const cfg = CAMERA_PRESETS[stateRef.current.cameraPreset];
+      camera.position.set(...cfg.pos);
+      controls.target.set(...cfg.target);
+      syncArVisualMode();
+    };
+
     sceneApiRef.current = {
       updateFinish: applyFinishAndSize,
       updateTheme: applyThemeColors,
+      syncArMode: syncArVisualMode,
+      startWebXrSession: async (overlayRoot) => {
+        const { session, hasHitTest } = await requestWebXrArSession(overlayRoot);
+        activeXrSession = session;
+        xrHitTestRequested = false;
+        xrHitTestSource = null;
+        xrBottlePlacedLocal = !hasHitTest;
+        xrSurfaceDetectedLocal = false;
+        setXrHasHitTest(hasHitTest);
+        setXrPlaced(!hasHitTest);
+        setXrSurfaceFound(false);
+
+        renderer.xr.setReferenceSpaceType('local');
+        await renderer.xr.setSession(session);
+
+        session.addEventListener('select', handleXrSelect);
+        session.addEventListener('end', () => {
+          session.removeEventListener('select', handleXrSelect);
+          cleanupXrSessionState();
+        });
+
+        stateRef.current.arOverlayMode = 'webxr';
+        setArOverlayMode('webxr');
+        syncArVisualMode();
+
+        if (!hasHitTest) {
+          bottleRoot.position.set(0, -0.14, -0.65);
+          bottleRoot.visible = true;
+          contactShadow.position.set(0, -0.139, -0.65);
+          contactShadow.visible = true;
+        } else {
+          bottleRoot.visible = false;
+          contactShadow.visible = false;
+        }
+      },
+      endWebXrSession: async () => {
+        if (activeXrSession) {
+          try {
+            await activeXrSession.end();
+          } catch {
+            cleanupXrSessionState();
+          }
+        } else {
+          cleanupXrSessionState();
+        }
+      },
+      rotateArBottle: (deltaRad) => {
+        bottleRoot.rotation.y += deltaRad;
+      },
+      resetArPlacement: () => {
+        if (stateRef.current.arOverlayMode === 'webxr') {
+          xrBottlePlacedLocal = false;
+          setXrPlaced(false);
+          bottleRoot.visible = false;
+          contactShadow.visible = false;
+        } else {
+          inlineTargetPos.set(0, 0, 0);
+          bottleRoot.position.set(0, 0, 0);
+          bottleRoot.rotation.y = 0;
+        }
+      },
       jumpCamera: (preset) => {
         const cfg = CAMERA_PRESETS[preset];
         targetCamPos.set(...cfg.pos);
@@ -1212,6 +1671,10 @@ export function BottleStudio3D({
       capturePng: () => {
         renderer.render(scene, camera);
         return renderer.domElement.toDataURL('image/png');
+      },
+      captureWebGlCanvas: () => {
+        renderer.render(scene, camera);
+        return renderer.domElement;
       },
       exportGlb: async () => {
         const s = stateRef.current;
@@ -1403,20 +1866,56 @@ export function BottleStudio3D({
     ro.observe(container);
 
     const clock = new THREE.Clock();
-    let rafId = 0;
 
-    const animate = () => {
-      rafId = requestAnimationFrame(animate);
+    const animate = (_timestamp: number, xrFrame?: XRFrame) => {
       const dt = Math.min(clock.getDelta(), 0.05);
       const elapsed = clock.getElapsedTime();
       const s = stateRef.current;
+      const inAr = s.arOverlayMode !== 'none';
 
-      if (s.autoSpin) {
+      // WebXR Real-Time Surface Hit-Testing inside active immersive-ar session
+      if (xrFrame && renderer.xr.isPresenting) {
+        const session = renderer.xr.getSession();
+        if (session && !xrHitTestRequested) {
+          xrHitTestRequested = true;
+          session
+            .requestReferenceSpace('viewer')
+            .then((viewerSpace) =>
+              session.requestHitTestSource?.({ space: viewerSpace })
+            )
+            .then((source) => {
+              if (source) xrHitTestSource = source;
+            })
+            .catch(() => {
+              xrHitTestSource = null;
+            });
+        }
+
+        const referenceSpace = renderer.xr.getReferenceSpace();
+        if (xrHitTestSource && referenceSpace) {
+          const hitResults = xrFrame.getHitTestResults(xrHitTestSource);
+          if (hitResults.length > 0) {
+            const pose = hitResults[0].getPose(referenceSpace);
+            if (pose) {
+              arReticleGroup.visible = true;
+              arReticleGroup.matrix.fromArray(pose.transform.matrix);
+              if (!xrSurfaceDetectedLocal) {
+                xrSurfaceDetectedLocal = true;
+                setXrSurfaceFound(true);
+              }
+            }
+          } else {
+            arReticleGroup.visible = false;
+          }
+        }
+      }
+
+      if (s.autoSpin && !inAr) {
         bottleRoot.rotation.y += dt * 0.42;
       }
 
-      // Smooth Exploded Thermal Cutaway animation
-      const exp = s.exploded;
+      // Smooth Exploded Thermal Cutaway animation (closed automatically in AR placement)
+      const exp = inAr ? 0 : s.exploded;
       bootMesh.visible = s.showBoot;
       bootMesh.position.y = THREE.MathUtils.lerp(
         bootMesh.position.y,
@@ -1450,9 +1949,34 @@ export function BottleStudio3D({
       waterMesh.visible = isGlassFinish || exp > 0.25;
       waterMesh.position.y = 1.02 + Math.sin(elapsed * 1.8) * 0.015;
 
-      // Floating chill mist droplets
-      dropsInst.visible = s.chillMist;
-      if (s.chillMist) {
+      // Inline Camera AR Overlay smooth placement damping
+      if (s.arOverlayMode === 'camera') {
+        const damp = 1 - Math.exp(-14 * dt);
+        bottleRoot.position.x = THREE.MathUtils.lerp(
+          bottleRoot.position.x,
+          inlineTargetPos.x,
+          damp
+        );
+        bottleRoot.position.z = THREE.MathUtils.lerp(
+          bottleRoot.position.z,
+          inlineTargetPos.z,
+          damp
+        );
+        contactShadow.position.set(
+          bottleRoot.position.x,
+          0.003,
+          bottleRoot.position.z
+        );
+        inlineReticle.position.set(
+          bottleRoot.position.x,
+          0.008,
+          bottleRoot.position.z
+        );
+      }
+
+      // Floating chill mist droplets (studio view only)
+      dropsInst.visible = !inAr && s.chillMist;
+      if (!inAr && s.chillMist) {
         for (let i = 0; i < dropCount; i++) {
           const d = dropSeeds[i];
           const a = d.angle + elapsed * 0.18 * d.speed;
@@ -1471,7 +1995,7 @@ export function BottleStudio3D({
         dropsInst.instanceMatrix.needsUpdate = true;
       }
 
-      if (camLerpActive) {
+      if (!inAr && camLerpActive) {
         camera.position.lerp(targetCamPos, 0.08);
         controls.target.lerp(targetLookAt, 0.08);
         if (camera.position.distanceTo(targetCamPos) < 0.02) {
@@ -1480,7 +2004,9 @@ export function BottleStudio3D({
       }
 
       // Subtle 3D emissive highlight on the currently inspected bottle component
-      const inspectedId = hoveredPartRef.current ?? pinnedPartRef.current;
+      const inspectedId = inAr
+        ? null
+        : (hoveredPartRef.current ?? pinnedPartRef.current);
       (Object.keys(partMaterials) as BottlePartId[]).forEach((pid) => {
         const targetIntensity =
           inspectedId === pid ? (pid === 'chamber' ? 0.34 : 0.22) : 0;
@@ -1493,19 +2019,32 @@ export function BottleStudio3D({
         });
       });
 
-      controls.update();
+      if (!inAr) {
+        controls.update();
+      }
       renderer.render(scene, camera);
     };
 
-    animate();
+    renderer.setAnimationLoop(animate);
 
     return () => {
-      cancelAnimationFrame(rafId);
+      renderer.setAnimationLoop(null);
+      if (activeXrSession) {
+        activeXrSession.end().catch(() => undefined);
+      }
+      if (xrHitTestSource) {
+        try {
+          xrHitTestSource.cancel();
+        } catch {
+          // Ignore
+        }
+      }
       ro.disconnect();
       renderer.domElement.removeEventListener('pointermove', onCanvasPointerMove);
       renderer.domElement.removeEventListener('pointerleave', onCanvasPointerLeave);
       renderer.domElement.removeEventListener('pointerdown', onCanvasPointerDown);
       renderer.domElement.removeEventListener('pointerup', onCanvasPointerUp);
+      renderer.domElement.removeEventListener('pointercancel', onCanvasPointerUp);
       controls.removeEventListener('start', onControlStart);
       controls.removeEventListener('end', onControlEnd);
       controls.dispose();
@@ -1513,6 +2052,12 @@ export function BottleStudio3D({
       envTarget.dispose();
       brandTexture.dispose();
       shadowTex.dispose();
+      arRingGeo.dispose();
+      arRingMat.dispose();
+      arDotGeo.dispose();
+      arDotMat.dispose();
+      inlineReticleGeo.dispose();
+      inlineReticleMat.dispose();
       bootGeo.dispose();
       bootMat.dispose();
       bodyGeo.dispose();
@@ -1656,17 +2201,121 @@ export function BottleStudio3D({
     );
   };
 
+  const handleEnterSpaceAr = async () => {
+    if (arOverlayMode !== 'none') {
+      await handleExitSpaceAr();
+      return;
+    }
+
+    setPinnedPart(null);
+    setHoveredPart(null);
+    pulseStudioInteract();
+
+    if (xrSupported && sceneApiRef.current) {
+      setXrLaunching(true);
+      try {
+        await sceneApiRef.current.startWebXrSession(xrOverlayRef.current);
+        onSnapshotSaved?.(
+          'WebXR AR session started — point at a flat surface and tap to place'
+        );
+        return;
+      } catch {
+        // Fallback seamlessly to inline live-camera AR overlay inside the 3D stage
+      } finally {
+        setXrLaunching(false);
+      }
+    }
+
+    setArOverlayMode('camera');
+    onSnapshotSaved?.(
+      'AR Camera Overlay active — tap or drag anywhere to place your bottle'
+    );
+  };
+
+  const handleExitSpaceAr = async () => {
+    if (arOverlayMode === 'webxr') {
+      await sceneApiRef.current?.endWebXrSession();
+    } else {
+      stopInlineCamera();
+      setArOverlayMode('none');
+    }
+  };
+
+  const handleCaptureInlineArPhoto = () => {
+    const glCanvas = sceneApiRef.current?.captureWebGlCanvas();
+    if (!glCanvas) return;
+    const out = document.createElement('canvas');
+    out.width = glCanvas.width;
+    out.height = glCanvas.height;
+    const ctx = out.getContext('2d');
+    if (!ctx) return;
+
+    const drawCover = (
+      src: HTMLVideoElement | HTMLImageElement,
+      sw0: number,
+      sh0: number
+    ) => {
+      if (sw0 <= 0 || sh0 <= 0) return;
+      const ca = out.width / out.height;
+      const sa = sw0 / sh0;
+      let sx = 0;
+      let sy = 0;
+      let sw = sw0;
+      let sh = sh0;
+      if (sa > ca) {
+        sw = sh0 * ca;
+        sx = (sw0 - sw) / 2;
+      } else {
+        sh = sw0 / ca;
+        sy = (sh0 - sh) / 2;
+      }
+      ctx.drawImage(src, sx, sy, sw, sh, 0, 0, out.width, out.height);
+    };
+
+    if (inlinePhotoUrl && arPhotoRef.current && arPhotoRef.current.complete) {
+      drawCover(
+        arPhotoRef.current,
+        arPhotoRef.current.naturalWidth,
+        arPhotoRef.current.naturalHeight
+      );
+    } else if (
+      arVideoRef.current &&
+      inlineCamStatus === 'active' &&
+      arVideoRef.current.videoWidth > 0
+    ) {
+      drawCover(
+        arVideoRef.current,
+        arVideoRef.current.videoWidth,
+        arVideoRef.current.videoHeight
+      );
+    } else {
+      ctx.fillStyle = '#0B1420';
+      ctx.fillRect(0, 0, out.width, out.height);
+    }
+    ctx.drawImage(glCanvas, 0, 0);
+
+    const link = document.createElement('a');
+    link.href = out.toDataURL('image/png');
+    link.download = `waterholic-webxr-ar-${studioFinish}-${studioSize.replace(/\s+/g, '')}.png`;
+    link.click();
+    triggerMicroHapticTick();
+    onSnapshotSaved?.('Saved live AR bottle photo as PNG');
+  };
+
+  const physicalHeightCm =
+    studioSize === '1.2 L' ? 30.9 : studioSize === '750 ml' ? 24.8 : 27.6;
+
   return (
     <section id="studio-3d" className="studio3d-section">
       <div className="container">
         <div className="studio3d-header">
           <div>
-            <span className="section-kicker">Interactive WebGL 3D Lab</span>
-            <h2 className="section-title">Inspect Every Millimeter in 3D</h2>
+            <span className="section-kicker">Interactive WebGL &amp; WebXR 3D Lab</span>
+            <h2 className="section-title">Inspect Every Millimeter in 3D &amp; AR</h2>
             <p className="studio3d-lead">
-              Orbit 360°, peel back the copper-lined vacuum chamber, test all 6
-              finishes including borosilicate Transparent glass, export a
-              real-scale .GLB for AR or 3D apps, or add your exact build to your bag.
+              Orbit 360°, peel back the copper-lined vacuum chamber, launch
+              WebXR AR to place your configured bottle in your physical space
+              through your camera, or export a meter-scale .GLB.
             </p>
           </div>
           <div className="studio3d-header-actions">
@@ -1688,16 +2337,42 @@ export function BottleStudio3D({
             </button>
             <button
               type="button"
+              className={`btn btn-ghost studio3d-webxr-btn${
+                arOverlayMode !== 'none' ? ' is-active' : ''
+              }`}
+              onClick={() => void handleEnterSpaceAr()}
+              disabled={xrLaunching}
+              title={
+                xrSupported
+                  ? 'Launch native WebXR immersive-ar to place your configured bottle in your physical space'
+                  : 'Replace the 3D studio preview with a live camera AR overlay of your bottle'
+              }
+            >
+              {xrLaunching ? (
+                <Loader2 size={16} className="studio3d-spin" aria-hidden="true" />
+              ) : arOverlayMode !== 'none' ? (
+                <X size={16} aria-hidden="true" />
+              ) : (
+                <Scan size={16} aria-hidden="true" />
+              )}
+              {arOverlayMode !== 'none'
+                ? 'Exit AR Overlay'
+                : xrSupported
+                  ? 'Start WebXR AR'
+                  : 'View in Space (AR)'}
+            </button>
+            <button
+              type="button"
               className="btn btn-ghost studio3d-ar-btn"
               onClick={() => {
                 setArInitialMode('desk');
                 setArModalOpen(true);
                 pulseStudioInteract();
               }}
-              title="Preview this exact custom bottle at 1:1 true scale on a desk, through your live camera, or send to your phone via QR"
+              title="Compare 1:1 true scale beside desk & gym props or scan QR to open on your phone"
             >
-              <Scan size={16} aria-hidden="true" />
-              View on Desk (AR)
+              <Smartphone size={16} aria-hidden="true" />
+              Desk Scale &amp; QR
             </button>
             <button
               type="button"
@@ -1758,16 +2433,334 @@ export function BottleStudio3D({
           </div>
         </div>
 
-        <div className="studio3d-stage-shell">
+        <input
+          ref={arPhotoInputRef}
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            stopInlineCamera();
+            if (inlinePhotoUrl) URL.revokeObjectURL(inlinePhotoUrl);
+            setInlinePhotoUrl(URL.createObjectURL(file));
+            setInlineCamStatus('idle');
+            onSnapshotSaved?.('Room photo loaded — drag bottle to position it');
+            e.target.value = '';
+          }}
+        />
+
+        <div
+          className={`studio3d-stage-shell${
+            arOverlayMode !== 'none' ? ' is-ar-active' : ''
+          }`}
+        >
+          {/* Live Camera / Custom Room Photo background layer when AR Overlay replaces the 3D Studio */}
+          {arOverlayMode === 'camera' && !inlinePhotoUrl && (
+            <video
+              ref={arVideoRef}
+              className="studio3d-ar-video"
+              playsInline
+              muted
+              autoPlay
+            />
+          )}
+          {arOverlayMode === 'camera' && inlinePhotoUrl && (
+            <img
+              ref={arPhotoRef}
+              src={inlinePhotoUrl}
+              alt="Uploaded space for AR bottle placement"
+              className="studio3d-ar-video"
+            />
+          )}
+
           {/* Isolated WebGL mount container */}
           <div
             ref={mountRef}
             className="studio3d-canvas-host"
-            aria-label="Interactive 3D Waterholic bottle viewer — hover or tap bottle components to inspect engineering specs, drag to orbit"
+            aria-label={
+              arOverlayMode !== 'none'
+                ? 'Active AR camera overlay — tap or drag to place your configured Waterholic bottle'
+                : 'Interactive 3D Waterholic bottle viewer — hover or tap bottle components to inspect engineering specs, drag to orbit'
+            }
           />
 
+          {/* WebXR DOM Overlay & Inline AR Overlay HUD */}
+          <div
+            ref={xrOverlayRef}
+            className={`studio3d-xr-overlay${
+              arOverlayMode !== 'none' ? ' is-open' : ''
+            }`}
+          >
+            {arOverlayMode !== 'none' && (
+              <>
+                <div className="studio3d-xr-topbar">
+                  <div className="studio3d-xr-status">
+                    <span className="studio3d-xr-tag">
+                      {arOverlayMode === 'webxr' ? 'WebXR Live AR' : 'AR Camera Overlay'}
+                    </span>
+                    <span className="studio3d-xr-instruction">
+                      {arOverlayMode === 'webxr'
+                        ? xrPlaced
+                          ? `Placed at 1:1 scale (${physicalHeightCm} cm) · Tap any surface to move`
+                          : xrSurfaceFound
+                            ? 'Surface locked — tap anywhere to place your bottle'
+                            : xrHasHitTest
+                              ? 'Point your camera slowly at a flat desk or floor…'
+                              : 'Viewing bottle at 1:1 physical scale'
+                        : inlineArDragging
+                          ? 'Placing bottle in space…'
+                          : `Tap or drag anywhere to position · ${physicalHeightCm} cm true scale`}
+                    </span>
+                  </div>
+
+                  <div className="studio3d-xr-top-actions">
+                    <button
+                      type="button"
+                      className="studio3d-xr-btn"
+                      onClick={() => {
+                        sceneApiRef.current?.rotateArBottle(Math.PI / 2);
+                        triggerMicroHapticTick();
+                      }}
+                      title="Rotate bottle 90 degrees"
+                    >
+                      <RotateCw size={14} aria-hidden="true" />
+                      <span>Rotate</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="studio3d-xr-btn"
+                      onClick={() => {
+                        sceneApiRef.current?.resetArPlacement();
+                        setInlineArScale(0.88);
+                        setInlineArPitchDeg(20);
+                      }}
+                      title={
+                        arOverlayMode === 'webxr'
+                          ? 'Pick up bottle and scan a new surface'
+                          : 'Center bottle in frame'
+                      }
+                    >
+                      <Move size={14} aria-hidden="true" />
+                      <span>{arOverlayMode === 'webxr' ? 'Relocate' : 'Center'}</span>
+                    </button>
+                    {arOverlayMode === 'camera' && (
+                      <>
+                        {!inlinePhotoUrl && inlineCamStatus === 'active' && (
+                          <button
+                            type="button"
+                            className="studio3d-xr-btn"
+                            onClick={() =>
+                              setInlineFacingMode((m) =>
+                                m === 'environment' ? 'user' : 'environment'
+                              )
+                            }
+                            title="Switch front or rear camera"
+                          >
+                            <RefreshCw size={14} aria-hidden="true" />
+                            <span>Flip</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="studio3d-xr-btn"
+                          onClick={() => arPhotoInputRef.current?.click()}
+                          title="Use a photo of your desk or room"
+                        >
+                          <ImagePlus size={14} aria-hidden="true" />
+                          <span>{inlinePhotoUrl ? 'Photo' : 'Use Photo'}</span>
+                        </button>
+                        {inlinePhotoUrl && (
+                          <button
+                            type="button"
+                            className="studio3d-xr-btn"
+                            onClick={() => {
+                              setInlinePhotoUrl(null);
+                              void startInlineCamera(inlineFacingMode);
+                            }}
+                          >
+                            <Video size={14} aria-hidden="true" />
+                            <span>Camera</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="studio3d-xr-btn"
+                          onClick={handleCaptureInlineArPhoto}
+                          title="Save composited AR snapshot"
+                        >
+                          <Camera size={14} aria-hidden="true" />
+                          <span>Snap</span>
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="studio3d-xr-btn studio3d-xr-exit"
+                      onClick={() => void handleExitSpaceAr()}
+                    >
+                      <X size={14} aria-hidden="true" />
+                      <span>Exit AR</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Camera fallback helper when camera permission is denied or unavailable on desktop */}
+                {arOverlayMode === 'camera' &&
+                  !inlinePhotoUrl &&
+                  (inlineCamStatus === 'denied' ||
+                    inlineCamStatus === 'unavailable') && (
+                    <div className="studio3d-xr-fallback">
+                      <VideoOff size={20} aria-hidden="true" />
+                      <div>
+                        <strong>
+                          {inlineCamStatus === 'unavailable'
+                            ? 'Camera unavailable on this device'
+                            : 'Camera permission was declined'}
+                        </strong>
+                        <p>
+                          Scan the QR code on your mobile phone for WebXR
+                          camera AR, or drop a photo of your desk below.
+                        </p>
+                      </div>
+                      <div className="studio3d-xr-fallback-btns">
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          onClick={() => arPhotoInputRef.current?.click()}
+                        >
+                          <ImagePlus size={14} aria-hidden="true" />
+                          Upload Room Photo
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          onClick={() => {
+                            void handleExitSpaceAr();
+                            setArInitialMode('qr');
+                            setArModalOpen(true);
+                          }}
+                        >
+                          <QrCode size={14} aria-hidden="true" />
+                          Open on Phone (QR)
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                {arOverlayMode === 'camera' &&
+                  !inlinePhotoUrl &&
+                  inlineCamStatus === 'requesting' && (
+                    <div className="studio3d-xr-loading">
+                      <Loader2 size={16} className="studio3d-spin" aria-hidden="true" />
+                      <span>Connecting to device camera…</span>
+                    </div>
+                  )}
+
+                {/* Compact Bottom AR Controls (Switch finish, size, or tune camera perspective live in AR) */}
+                <div className="studio3d-xr-dock">
+                  <div className="studio3d-xr-dock-group">
+                    <span className="studio3d-xr-dock-label">Finish</span>
+                    <div className="studio3d-swatches">
+                      {STUDIO_FINISHES.map((fin) => (
+                        <button
+                          key={fin.id}
+                          type="button"
+                          className={`studio3d-swatch${
+                            studioFinish === fin.id ? ' is-active' : ''
+                          }`}
+                          onClick={() => handleSelectFinish(fin.id)}
+                          title={fin.label}
+                          aria-label={`Select ${fin.label} finish in AR`}
+                        >
+                          <span
+                            className={`studio3d-swatch-dot${
+                              fin.isGlass ? ' swatch-transparent' : ''
+                            }`}
+                            style={
+                              fin.isGlass ? undefined : { background: fin.hex }
+                            }
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="studio3d-xr-dock-group">
+                    <span className="studio3d-xr-dock-label">Size</span>
+                    <div className="studio3d-size-row">
+                      {(['750 ml', '950 ml', '1.2 L'] as StudioSizeKey[]).map(
+                        (sz) => (
+                          <button
+                            key={sz}
+                            type="button"
+                            className={`studio3d-size-btn${
+                              studioSize === sz ? ' is-active' : ''
+                            }`}
+                            onClick={() => {
+                              setStudioSize(sz);
+                              onSyncSize?.(sz, SIZE_SPECS[sz].price);
+                              pulseStudioInteract();
+                            }}
+                          >
+                            {sz}
+                          </button>
+                        )
+                      )}
+                    </div>
+                  </div>
+
+                  {arOverlayMode === 'camera' && (
+                    <>
+                      <div className="studio3d-xr-dock-group studio3d-xr-slider">
+                        <label
+                          htmlFor="studio3d-inline-ar-scale"
+                          className="studio3d-xr-dock-label"
+                        >
+                          Scale ({Math.round(inlineArScale * 100)}%)
+                        </label>
+                        <input
+                          id="studio3d-inline-ar-scale"
+                          type="range"
+                          min={0.45}
+                          max={1.45}
+                          step={0.02}
+                          value={inlineArScale}
+                          onChange={(e) =>
+                            setInlineArScale(Number(e.target.value))
+                          }
+                          className="studio3d-range"
+                        />
+                      </div>
+                      <div className="studio3d-xr-dock-group studio3d-xr-slider">
+                        <label
+                          htmlFor="studio3d-inline-ar-pitch"
+                          className="studio3d-xr-dock-label"
+                        >
+                          Surface Angle ({inlineArPitchDeg}°)
+                        </label>
+                        <input
+                          id="studio3d-inline-ar-pitch"
+                          type="range"
+                          min={6}
+                          max={46}
+                          step={1}
+                          value={inlineArPitchDeg}
+                          onChange={(e) =>
+                            setInlineArPitchDeg(Number(e.target.value))
+                          }
+                          className="studio3d-range"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
           {/* Interactive 3D Component Engineering Spec Tooltip (GSAP Pop-In) */}
-          {activePartSpec && (
+          {arOverlayMode === 'none' && activePartSpec && (
             <div
               ref={tooltipAnchorRef}
               className={`studio3d-tooltip-anchor${
@@ -1831,48 +2824,70 @@ export function BottleStudio3D({
           )}
 
           {/* Top-left crisp model readout (no backdrop-filter over WebGL) */}
-          <div className="studio3d-badge-bar">
-            <span className="studio3d-chip">
-              {currentSpec.label} · {studioSize}
-            </span>
-            <span className="studio3d-inspect-hint">
-              <Info size={12} aria-hidden="true" />
-              <span>Hover or tap parts for specs</span>
-            </span>
-            <button
-              type="button"
-              className="studio3d-mini-btn"
-              onClick={() => {
-                setExploded(0);
-                setAutoSpin(true);
-                setPinnedPart(null);
-                handleCameraPreset('hero');
-              }}
-              title="Reset 3D view"
-            >
-              <RotateCcw size={14} aria-hidden="true" />
-              Reset View
-            </button>
-          </div>
+          {arOverlayMode === 'none' && (
+            <div className="studio3d-badge-bar">
+              <span className="studio3d-chip">
+                {currentSpec.label} · {studioSize}
+              </span>
+              <span className="studio3d-inspect-hint">
+                <Info size={12} aria-hidden="true" />
+                <span>Hover or tap parts for specs</span>
+              </span>
+              <button
+                type="button"
+                className="studio3d-mini-btn studio3d-mini-ar-btn"
+                onClick={() => void handleEnterSpaceAr()}
+                title={
+                  xrSupported
+                    ? 'Launch native WebXR AR in your physical space'
+                    : 'Switch 3D stage to live camera AR overlay'
+                }
+              >
+                <Scan size={13} aria-hidden="true" />
+                {xrSupported ? 'WebXR AR' : 'AR Camera'}
+              </button>
+              <button
+                type="button"
+                className="studio3d-mini-btn"
+                onClick={() => {
+                  setExploded(0);
+                  setAutoSpin(true);
+                  setPinnedPart(null);
+                  handleCameraPreset('hero');
+                }}
+                title="Reset 3D view"
+              >
+                <RotateCcw size={14} aria-hidden="true" />
+                Reset View
+              </button>
+            </div>
+          )}
 
           {/* Camera preset strip top-right */}
-          <div className="studio3d-camera-bar" role="group" aria-label="3D camera angles">
-            {(Object.keys(CAMERA_PRESETS) as CameraPresetKey[]).map((key) => (
-              <button
-                key={key}
-                type="button"
-                className={`studio3d-cam-btn${cameraPreset === key ? ' is-active' : ''}`}
-                onClick={() => handleCameraPreset(key)}
-              >
-                {CAMERA_PRESETS[key].label}
-              </button>
-            ))}
-          </div>
+          {arOverlayMode === 'none' && (
+            <div
+              className="studio3d-camera-bar"
+              role="group"
+              aria-label="3D camera angles"
+            >
+              {(Object.keys(CAMERA_PRESETS) as CameraPresetKey[]).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`studio3d-cam-btn${cameraPreset === key ? ' is-active' : ''}`}
+                  onClick={() => handleCameraPreset(key)}
+                >
+                  {CAMERA_PRESETS[key].label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Compact collapsible bottom control dock (solid surface, zero backdrop-filter) */}
-          <div
-            className={`studio3d-dock${dockCollapsed ? ' is-collapsed' : ''}`}
-          >
+          {arOverlayMode === 'none' && (
+            <div
+              className={`studio3d-dock${dockCollapsed ? ' is-collapsed' : ''}`}
+            >
             <button
               type="button"
               className="studio3d-dock-toggle"
@@ -2031,6 +3046,7 @@ export function BottleStudio3D({
               </div>
             )}
           </div>
+          )}
         </div>
       </div>
 

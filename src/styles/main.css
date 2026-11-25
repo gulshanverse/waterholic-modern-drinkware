@@ -5708,27 +5708,158 @@ a {
   margin-bottom: 10px;
 }
 
-/* Header AI Concierge Pill */
+/* Header AI Concierge Architectural Gradient Button */
 .concierge-nav-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 13px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--border-strong);
-  background: var(--surface-elevated);
+  gap: 8px;
+  height: 38px;
+  padding: 4px 12px 4px 5px;
+  border-radius: 12px;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--surface-elevated) 94%, var(--bg)),
+      var(--surface)
+    ) padding-box,
+    linear-gradient(
+      125deg,
+      #38bdf8 0%,
+      #818cf8 45%,
+      #c084fc 78%,
+      #0ea5e9 100%
+    ) border-box;
   color: var(--text-primary);
   font-size: 13px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   cursor: pointer;
-  transition: border-color 180ms var(--ease-out), background-color 180ms var(--ease-out), transform 180ms var(--ease-out);
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(14, 30, 58, 0.08);
+  transition:
+    transform 190ms var(--ease-out),
+    box-shadow 220ms var(--ease-out),
+    filter 190ms var(--ease-out);
 }
 
-.concierge-nav-btn:hover {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--accent-text);
-  transform: translateY(-1px);
+[data-theme='dark'] .concierge-nav-btn {
+  background:
+    linear-gradient(145deg, #121c33 0%, #0b1324 100%) padding-box,
+    linear-gradient(
+      125deg,
+      rgba(56, 189, 248, 0.88) 0%,
+      rgba(129, 140, 248, 0.9) 48%,
+      rgba(192, 132, 252, 0.85) 82%,
+      rgba(14, 165, 233, 0.85) 100%
+    ) border-box;
+  box-shadow: 0 4px 18px rgba(8, 16, 36, 0.42);
+}
+
+[data-daypart='morning']:not([data-theme='dark']) .concierge-nav-btn {
+  background:
+    linear-gradient(145deg, #fffdf9 0%, #f8f0e3 100%) padding-box,
+    linear-gradient(125deg, #f59e0b 0%, #38bdf8 52%, #6366f1 100%) border-box;
+}
+
+/* Subtle diagonal specular shimmer sweep on hover */
+.concierge-nav-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 20%,
+    rgba(125, 211, 252, 0.18) 50%,
+    transparent 80%
+  );
+  transform: translateX(-120%);
+  transition: transform 520ms var(--ease-out);
+  pointer-events: none;
+}
+
+.concierge-nav-orb {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(
+    circle at 32% 24%,
+    #1e3354 0%,
+    #0c182c 62%,
+    #070f1d 100%
+  );
+  box-shadow:
+    0 0 0 1.5px rgba(125, 211, 252, 0.42),
+    inset 0 1px 1px rgba(255, 255, 255, 0.25);
+  transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
+}
+
+.concierge-nav-emblem {
+  width: 17px;
+  height: 17px;
+  display: block;
+}
+
+.concierge-nav-label {
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+.concierge-nav-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  padding: 3px 5px;
+  border-radius: 5px;
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.16),
+    rgba(129, 140, 248, 0.22)
+  );
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+}
+
+[data-theme='dark'] .concierge-nav-tag {
+  color: #bae6fd;
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.2),
+    rgba(168, 85, 247, 0.22)
+  );
+  border-color: rgba(125, 211, 252, 0.34);
+}
+
+.concierge-nav-btn:hover,
+.concierge-nav-btn:focus-visible {
+  transform: translateY(-1.5px);
+  box-shadow:
+    0 8px 22px rgba(56, 189, 248, 0.22),
+    0 2px 10px rgba(99, 102, 241, 0.18);
+  outline: none;
+}
+
+.concierge-nav-btn:hover::after {
+  transform: translateX(120%);
+}
+
+.concierge-nav-btn:hover .concierge-nav-orb {
+  transform: scale(1.08);
+  box-shadow:
+    0 0 0 1.5px rgba(125, 211, 252, 0.75),
+    0 0 10px rgba(56, 189, 248, 0.45);
+}
+
+.concierge-nav-btn:active {
+  transform: translateY(0) scale(0.97);
 }
 
 /* Profile Google Cloud Account Sync Card */
@@ -6616,34 +6747,167 @@ a {
   margin-top: auto;
 }
 
-/* AI Concierge Slide-Over Drawer & Floating Launcher */
-.concierge-fab {
-  position: fixed;
-  right: 22px;
-  bottom: 22px;
-  z-index: 44;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 18px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--accent);
-  background: var(--accent);
-  color: var(--accent-text);
-  font-size: 14px;
-  font-weight: 700;
-  box-shadow: var(--shadow-tinted);
-  cursor: pointer;
-  transition: transform 180ms var(--ease-out), background-color 180ms;
+/* AI Concierge Slide-Over Drawer & Floating Circular Gradient Orb Launcher */
+@keyframes conciergeRingSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
-.concierge-fab:hover {
-  transform: translateY(-2px);
-  background: var(--accent-hover);
+.concierge-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 44;
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  isolation: isolate;
+  transition: transform 220ms var(--ease-out);
+}
+
+/* Soft outer gradient aura halo */
+.concierge-fab::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    #38bdf8,
+    #6366f1,
+    #a855f7,
+    #0ea5e9,
+    #38bdf8
+  );
+  filter: blur(11px);
+  opacity: 0.56;
+  z-index: -2;
+  animation: conciergeRingSpin 7s linear infinite;
+  transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out);
+}
+
+/* Crisp outer metallic/gradient bezel ring */
+.concierge-fab-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 40deg,
+    #7dd3fc,
+    #38bdf8,
+    #818cf8,
+    #c084fc,
+    #0284c7,
+    #7dd3fc
+  );
+  z-index: -1;
+  animation: conciergeRingSpin 7s linear infinite;
+  box-shadow: 0 10px 26px rgba(14, 30, 58, 0.34);
+}
+
+/* Circadian Morning warm sunlight-aqua outer gradient adaptation */
+[data-daypart='morning']:not([data-theme='dark']) .concierge-fab::before,
+[data-daypart='morning']:not([data-theme='dark']) .concierge-fab-ring {
+  background: conic-gradient(
+    from 25deg,
+    #f59e0b,
+    #38bdf8,
+    #6366f1,
+    #fb7185,
+    #f59e0b
+  );
+}
+
+/* Inner circular obsidian-sapphire core holding the bespoke Hydro-AI emblem */
+.concierge-fab-core {
+  position: relative;
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 30% 24%,
+    #1b2e4b 0%,
+    #0c182c 58%,
+    #070f1d 100%
+  );
+  box-shadow:
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.28),
+    inset 0 -4px 10px rgba(2, 8, 20, 0.65);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 200ms var(--ease-out), transform 200ms var(--ease-out);
+}
+
+.concierge-fab-emblem {
+  width: 28px;
+  height: 28px;
+  display: block;
+  transition: transform 220ms var(--ease-out), filter 220ms var(--ease-out);
+}
+
+/* Refined hover tooltip label sliding smoothly to the left on desktop */
+.concierge-fab-tooltip {
+  position: absolute;
+  right: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%) translateX(6px);
+  padding: 6px 12px;
+  border-radius: 9px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(9, 19, 34, 0.94);
+  color: #f0f9ff;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow: 0 10px 24px rgba(5, 14, 26, 0.28);
+  transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+}
+
+.concierge-fab:hover,
+.concierge-fab:focus-visible {
+  transform: translateY(-3px) scale(1.04);
+  outline: none;
+}
+
+.concierge-fab:hover::before,
+.concierge-fab:focus-visible::before {
+  opacity: 0.85;
+  transform: scale(1.06);
+}
+
+.concierge-fab:hover .concierge-fab-emblem,
+.concierge-fab:focus-visible .concierge-fab-emblem {
+  transform: scale(1.08);
+  filter: drop-shadow(0 0 8px rgba(125, 211, 252, 0.55));
+}
+
+.concierge-fab:hover .concierge-fab-tooltip,
+.concierge-fab:focus-visible .concierge-fab-tooltip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+.concierge-fab:active {
+  transform: translateY(0) scale(0.94);
 }
 
 .back-to-top-btn {
-  bottom: 78px;
+  bottom: 96px;
 }
 
 .concierge-backdrop {
@@ -9631,22 +9895,24 @@ body {
   .concierge-fab {
     right: 14px;
     bottom: max(16px, env(safe-area-inset-bottom));
-    width: 48px;
-    height: 48px;
-    min-width: 48px;
-    min-height: 48px;
-    padding: 0;
-    justify-content: center;
-    border-radius: 50%;
+    width: 54px;
+    height: 54px;
+    min-width: 54px;
+    min-height: 54px;
   }
 
-  .concierge-fab span {
+  .concierge-fab-emblem {
+    width: 25px;
+    height: 25px;
+  }
+
+  .concierge-fab-tooltip {
     display: none;
   }
 
   .back-to-top-btn {
-    right: 14px;
-    bottom: calc(76px + env(safe-area-inset-bottom));
+    right: 17px;
+    bottom: calc(82px + env(safe-area-inset-bottom));
     width: 48px;
     height: 48px;
     min-width: 48px;
@@ -12110,8 +12376,8 @@ body {
   overflow: hidden;
   opacity: 0;
   transition: opacity 420ms var(--ease-out);
-  --cursor-glow-core: color-mix(in srgb, var(--accent) 13%, transparent);
-  --cursor-glow-mid: color-mix(in srgb, var(--accent) 5.5%, transparent);
+  --cursor-glow-core: color-mix(in srgb, var(--accent) 8%, transparent);
+  --cursor-glow-mid: color-mix(in srgb, var(--accent) 3%, transparent);
 }
 
 .ambient-cursor-glow.is-visible {
@@ -12119,47 +12385,47 @@ body {
 }
 
 .ambient-cursor-glow.is-interactive {
-  --cursor-glow-core: color-mix(in srgb, var(--accent) 18%, transparent);
-  --cursor-glow-mid: color-mix(in srgb, var(--accent) 7.5%, transparent);
+  --cursor-glow-core: color-mix(in srgb, var(--accent) 11%, transparent);
+  --cursor-glow-mid: color-mix(in srgb, var(--accent) 4.5%, transparent);
 }
 
 [data-daypart='morning'] .ambient-cursor-glow,
 .ambient-cursor-glow[data-daypart='morning'] {
-  --cursor-glow-core: rgba(217, 119, 6, 0.13);
-  --cursor-glow-mid: rgba(245, 158, 11, 0.055);
+  --cursor-glow-core: rgba(217, 119, 6, 0.08);
+  --cursor-glow-mid: rgba(245, 158, 11, 0.032);
 }
 
 [data-daypart='morning'] .ambient-cursor-glow.is-interactive,
 .ambient-cursor-glow[data-daypart='morning'].is-interactive {
-  --cursor-glow-core: rgba(217, 119, 6, 0.175);
-  --cursor-glow-mid: rgba(245, 158, 11, 0.08);
+  --cursor-glow-core: rgba(217, 119, 6, 0.11);
+  --cursor-glow-mid: rgba(245, 158, 11, 0.048);
 }
 
 [data-daypart='evening'] .ambient-cursor-glow,
 .ambient-cursor-glow[data-daypart='evening'] {
   mix-blend-mode: screen;
-  --cursor-glow-core: rgba(129, 140, 248, 0.18);
-  --cursor-glow-mid: rgba(99, 102, 241, 0.075);
+  --cursor-glow-core: rgba(129, 140, 248, 0.11);
+  --cursor-glow-mid: rgba(99, 102, 241, 0.042);
 }
 
 [data-daypart='evening'] .ambient-cursor-glow.is-interactive,
 .ambient-cursor-glow[data-daypart='evening'].is-interactive {
-  --cursor-glow-core: rgba(129, 140, 248, 0.24);
-  --cursor-glow-mid: rgba(99, 102, 241, 0.105);
+  --cursor-glow-core: rgba(129, 140, 248, 0.145);
+  --cursor-glow-mid: rgba(99, 102, 241, 0.062);
 }
 
 .ambient-cursor-orb {
   position: absolute;
   top: 0;
   left: 0;
-  width: clamp(380px, 38vw, 620px);
-  height: clamp(380px, 38vw, 620px);
+  width: clamp(150px, 14vw, 220px);
+  height: clamp(150px, 14vw, 220px);
   border-radius: 50%;
   background: radial-gradient(
     circle at center,
     var(--cursor-glow-core) 0%,
-    var(--cursor-glow-mid) 36%,
-    transparent 70%
+    var(--cursor-glow-mid) 34%,
+    transparent 66%
   );
   will-change: transform;
   transform: translate3d(-999px, -999px, 0);
@@ -13144,6 +13410,253 @@ body {
   .ar-qr-code-box {
     width: 210px;
     height: 210px;
+  }
+}
+
+/* ============================================================================
+   WEBXR IMMERSIVE-AR & IN-STAGE CAMERA AR OVERLAY (BottleStudio3D)
+   ============================================================================ */
+
+.studio3d-webxr-btn {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border)) !important;
+  color: var(--accent) !important;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface)) !important;
+  font-weight: 700 !important;
+}
+
+.studio3d-webxr-btn:hover,
+.studio3d-webxr-btn.is-active {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent-text) !important;
+}
+
+.studio3d-mini-ar-btn {
+  border-color: rgba(56, 189, 248, 0.5) !important;
+  color: #38bdf8 !important;
+}
+
+.studio3d-mini-ar-btn:hover {
+  background: var(--accent) !important;
+  color: var(--accent-text) !important;
+  border-color: var(--accent) !important;
+}
+
+.studio3d-stage-shell.is-ar-active {
+  background: #08101a;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+}
+
+.studio3d-ar-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.studio3d-stage-shell.is-ar-active .studio3d-canvas-host {
+  position: relative;
+  z-index: 2;
+  touch-action: none;
+}
+
+.studio3d-xr-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 14px;
+}
+
+.studio3d-xr-overlay.is-open {
+  display: flex;
+}
+
+.studio3d-xr-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.studio3d-xr-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 7px 11px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  background: rgba(8, 18, 30, 0.9);
+  color: #f0f9ff;
+  pointer-events: auto;
+  max-width: min(500px, 100%);
+}
+
+.studio3d-xr-tag {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-text);
+  white-space: nowrap;
+}
+
+.studio3d-xr-instruction {
+  font-size: 12px;
+  font-weight: 500;
+  color: #e2e8f0;
+  line-height: 1.3;
+}
+
+.studio3d-xr-top-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.studio3d-xr-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 11px;
+  border-radius: 9px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  background: rgba(8, 18, 30, 0.92);
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.studio3d-xr-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.studio3d-xr-exit {
+  border-color: rgba(248, 113, 113, 0.45);
+  color: #fecaca;
+}
+
+.studio3d-xr-exit:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+}
+
+.studio3d-xr-fallback,
+.studio3d-xr-loading {
+  align-self: center;
+  margin: auto;
+  pointer-events: auto;
+  width: min(430px, 100%);
+  padding: 18px 20px;
+  border-radius: 15px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: rgba(8, 18, 30, 0.94);
+  color: #f0f9ff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+}
+
+.studio3d-xr-fallback strong {
+  display: block;
+  font-size: 14.5px;
+  margin-bottom: 3px;
+}
+
+.studio3d-xr-fallback p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #cbd5e1;
+}
+
+.studio3d-xr-fallback-btns {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.studio3d-xr-loading {
+  flex-direction: row;
+  justify-content: center;
+  width: auto;
+  padding: 10px 16px;
+  font-size: 12.5px;
+}
+
+.studio3d-xr-dock {
+  align-self: center;
+  pointer-events: auto;
+  width: min(860px, 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding: 11px 15px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: rgba(8, 18, 30, 0.94);
+  color: #f8fafc;
+}
+
+.studio3d-xr-dock-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.studio3d-xr-dock-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.studio3d-xr-slider {
+  min-width: 124px;
+  flex: 1 1 124px;
+  max-width: 175px;
+}
+
+@media (max-width: 680px) {
+  .studio3d-xr-overlay {
+    padding: 10px;
+  }
+
+  .studio3d-xr-btn {
+    padding: 6px 9px;
+    font-size: 11.5px;
+  }
+
+  .studio3d-xr-dock {
+    padding: 10px 12px;
+    gap: 8px 12px;
   }
 }
 

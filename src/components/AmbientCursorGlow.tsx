@@ -83,7 +83,7 @@ export function AmbientCursorGlow({ daypart }: AmbientCursorGlowProps) {
 
       const targetEl = e.target as Element | null;
       const overInteractive = Boolean(targetEl?.closest(INTERACTIVE_SELECTOR));
-      targetScale = overInteractive ? 1.14 : 1;
+      targetScale = overInteractive ? 1.08 : 1;
       host.classList.toggle('is-interactive', overInteractive);
 
       scheduleTick();
