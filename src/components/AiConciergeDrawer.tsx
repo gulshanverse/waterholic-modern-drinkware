@@ -9,7 +9,6 @@ import {
   MicOff,
   PhoneOff,
   Send,
-  Sparkles,
   Volume2,
   X,
   Zap,
@@ -606,7 +605,51 @@ export function AiConciergeDrawer({
         <div className="concierge-head">
           <div className="concierge-title-wrap">
             <span className="concierge-icon-badge" aria-hidden="true">
-              <Sparkles size={17} />
+              <span className="concierge-icon-ring" aria-hidden="true" />
+              <span className="concierge-icon-core" aria-hidden="true">
+                <svg
+                  className="concierge-icon-emblem"
+                  viewBox="0 0 32 32"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <defs>
+                    <linearGradient
+                      id="whConciergeDrawerGrad"
+                      x1="6"
+                      y1="4"
+                      x2="26"
+                      y2="28"
+                      gradientUnits="userSpaceOnUse"
+                    >
+                      <stop offset="0%" stopColor="#7DD3FC" />
+                      <stop offset="52%" stopColor="#A5B4FC" />
+                      <stop offset="100%" stopColor="#F0F9FF" />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    d="M16 4.2C16 4.2 8.2 13.1 8.2 19.2C8.2 23.62 11.69 27.2 16 27.2C20.31 27.2 23.8 23.62 23.8 19.2C23.8 13.1 16 4.2 16 4.2Z"
+                    stroke="url(#whConciergeDrawerGrad)"
+                    strokeWidth="2.1"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M12.6 19.4V17.4M16 21.8V14.8M19.4 19.4V17.4"
+                    stroke="url(#whConciergeDrawerGrad)"
+                    strokeWidth="2.1"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M5.4 14.2C4.6 16.8 5.2 19.8 6.8 22.1M26.6 14.2C27.4 16.8 26.8 19.8 25.2 22.1"
+                    stroke="url(#whConciergeDrawerGrad)"
+                    strokeOpacity="0.65"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>
             </span>
             <div>
               <h2>Waterholic AI Concierge</h2>

@@ -61,7 +61,6 @@ import {
   Menu,
   Moon,
   PenTool,
-  Sparkles,
   Sun,
   Sunrise,
   Volume2,
@@ -1963,45 +1962,28 @@ export default function App() {
               aria-label="Open Waterholic AI Hydration Concierge"
               title="Waterholic AI Concierge — Chat, Voice & Local Refills"
             >
-              <span className="concierge-nav-orb" aria-hidden="true">
-                <svg
-                  className="concierge-nav-emblem"
-                  viewBox="0 0 32 32"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  aria-hidden="true"
-                >
-                  <defs>
-                    <linearGradient
-                      id="whNavConciergeGrad"
-                      x1="6"
-                      y1="4"
-                      x2="26"
-                      y2="28"
-                      gradientUnits="userSpaceOnUse"
-                    >
-                      <stop offset="0%" stopColor="#7DD3FC" />
-                      <stop offset="55%" stopColor="#A5B4FC" />
-                      <stop offset="100%" stopColor="#F8FAFC" />
-                    </linearGradient>
-                  </defs>
-                  <path
-                    d="M16 4.5C16 4.5 8.6 13.1 8.6 19.1C8.6 23.35 11.91 26.8 16 26.8C20.09 26.8 23.4 23.35 23.4 19.1C23.4 13.1 16 4.5 16 4.5Z"
-                    stroke="url(#whNavConciergeGrad)"
-                    strokeWidth="2.3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M12.7 19.3V17.4M16 21.5V15.1M19.3 19.3V17.4"
-                    stroke="url(#whNavConciergeGrad)"
-                    strokeWidth="2.3"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </span>
+              <svg
+                className="concierge-nav-emblem"
+                viewBox="0 0 32 32"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+              >
+                <path
+                  d="M16 4.5C16 4.5 8.6 13.1 8.6 19.1C8.6 23.35 11.91 26.8 16 26.8C20.09 26.8 23.4 23.35 23.4 19.1C23.4 13.1 16 4.5 16 4.5Z"
+                  stroke="currentColor"
+                  strokeWidth="2.1"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M12.7 19.3V17.4M16 21.5V15.1M19.3 19.3V17.4"
+                  stroke="currentColor"
+                  strokeWidth="2.1"
+                  strokeLinecap="round"
+                />
+              </svg>
               <span className="concierge-nav-label">Concierge</span>
-              <span className="concierge-nav-tag">AI</span>
             </button>
 
             <button
@@ -2466,7 +2448,28 @@ export default function App() {
               setConciergeOpen(true);
             }}
           >
-            <Sparkles size={16} aria-hidden="true" />
+            <svg
+              width="17"
+              height="17"
+              viewBox="0 0 32 32"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <path
+                d="M16 4.5C16 4.5 8.6 13.1 8.6 19.1C8.6 23.35 11.91 26.8 16 26.8C20.09 26.8 23.4 23.35 23.4 19.1C23.4 13.1 16 4.5 16 4.5Z"
+                stroke="currentColor"
+                strokeWidth="2.1"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M12.7 19.3V17.4M16 21.5V15.1M19.3 19.3V17.4"
+                stroke="currentColor"
+                strokeWidth="2.1"
+                strokeLinecap="round"
+              />
+            </svg>
             <span>Open AI Concierge</span>
           </button>
           <div className="mobile-nav-action-row">

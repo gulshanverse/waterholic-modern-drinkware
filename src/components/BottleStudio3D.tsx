@@ -356,14 +356,14 @@ function createBrandWrapTexture(
 
   // Crisp engraved wordmark
   ctx.textAlign = 'center';
-  ctx.font = '700 44px "DM Sans", -apple-system, sans-serif';
+  ctx.font = '600 44px "Plus Jakarta Sans", "IBM Plex Sans", -apple-system, sans-serif';
   ctx.fillText('W A T E R H O L I C', cx, cy + 56);
 
   // Subtle architectural divider & capacity stamp
   ctx.globalAlpha = isGlass ? 0.55 : 0.62;
   ctx.fillRect(cx - 58, cy + 82, 116, 2.5);
 
-  ctx.font = '500 22px "DM Mono", monospace';
+  ctx.font = '500 22px "IBM Plex Mono", monospace';
   ctx.fillText(`18/8 VACUUM  ·  ${sizeLabel}`, cx, cy + 122);
 
   // Optional custom laser monogram etched cleanly beneath the capacity stamp
@@ -374,8 +374,8 @@ function createBrandWrapTexture(
       engraving?.font === 'serif'
         ? '600 32px Georgia, "Times New Roman", serif'
         : engraving?.font === 'mono'
-          ? '600 26px "DM Mono", monospace'
-          : '600 28px "DM Sans", -apple-system, sans-serif';
+          ? '500 26px "IBM Plex Mono", monospace'
+          : '600 28px "Plus Jakarta Sans", "IBM Plex Sans", -apple-system, sans-serif';
     ctx.font = fontFamily;
     ctx.fillText(
       cleanedEngraving.toUpperCase().split('').join(' '),

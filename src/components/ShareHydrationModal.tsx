@@ -486,7 +486,7 @@ export function ShareHydrationModal({
     drawWaterholicDroplet(ctx, pad, pad - 4, 42, pal.accent);
 
     ctx.fillStyle = pal.textPrimary;
-    ctx.font = '700 32px "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.font = '600 32px "Plus Jakarta Sans", "IBM Plex Sans", -apple-system, sans-serif';
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
     ctx.fillText('WATERHOLIC', pad + 52, pad + 18);
@@ -497,7 +497,7 @@ export function ShareHydrationModal({
       year: 'numeric',
     });
     ctx.fillStyle = pal.textSecondary;
-    ctx.font = '500 24px "DM Mono", monospace';
+    ctx.font = '500 24px "IBM Plex Sans", -apple-system, sans-serif';
     ctx.textAlign = 'right';
     ctx.fillText(todayStr, width - pad, pad + 18);
 
@@ -520,15 +520,15 @@ export function ShareHydrationModal({
       ctx.textAlign = 'left';
       ctx.textBaseline = 'alphabetic';
       ctx.fillStyle = pal.accent;
-      ctx.font = '600 24px "DM Sans", -apple-system, sans-serif';
-      ctx.fillText('DAILY HYDRATION LOG', pad, pad + 128);
+      ctx.font = '600 24px "IBM Plex Sans", -apple-system, sans-serif';
+      ctx.fillText('Daily Hydration Log', pad, pad + 128);
 
       ctx.fillStyle = pal.textPrimary;
-      ctx.font = '700 54px "DM Sans", -apple-system, sans-serif';
+      ctx.font = '600 54px "Plus Jakarta Sans", "IBM Plex Sans", -apple-system, sans-serif';
       ctx.fillText(profile.name, pad, pad + 194);
 
       ctx.fillStyle = pal.textSecondary;
-      ctx.font = '500 26px "DM Sans", -apple-system, sans-serif';
+      ctx.font = '500 26px "IBM Plex Sans", -apple-system, sans-serif';
       const subLine = profile.university
         ? `${memberTier}  ·  ${profile.university}`
         : `${memberTier}  ·  ${profile.preferredColor} Finish`;
@@ -573,13 +573,13 @@ export function ShareHydrationModal({
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = pal.textPrimary;
-      ctx.font = `700 ${isTall ? 78 : 66}px "DM Mono", monospace`;
+      ctx.font = `600 ${isTall ? 78 : 66}px "Plus Jakarta Sans", "IBM Plex Sans", sans-serif`;
       ctx.fillText(`${hydrationPct}%`, ringCx, ringCy - 12);
 
       ctx.fillStyle = pal.textSecondary;
-      ctx.font = '600 23px "DM Sans", -apple-system, sans-serif';
+      ctx.font = '500 23px "IBM Plex Sans", -apple-system, sans-serif';
       ctx.fillText(
-        hydrationPct >= 100 ? 'GOAL REACHED' : 'OF DAILY GOAL',
+        hydrationPct >= 100 ? 'Goal Reached' : 'Of Daily Goal',
         ringCx,
         ringCy + 42
       );
@@ -589,14 +589,14 @@ export function ShareHydrationModal({
         ctx.textAlign = 'center';
         ctx.textBaseline = 'alphabetic';
         ctx.fillStyle = pal.textPrimary;
-        ctx.font = '700 44px "DM Mono", monospace';
+        ctx.font = '600 44px "Plus Jakarta Sans", "IBM Plex Sans", sans-serif';
         ctx.fillText(
           `${hydration.consumedMl.toLocaleString()} / ${profile.dailyGoalMl.toLocaleString()} ml`,
           width / 2,
           cardTop + 448
         );
         ctx.fillStyle = pal.textSecondary;
-        ctx.font = '500 25px "DM Sans", -apple-system, sans-serif';
+        ctx.font = '400 25px "IBM Plex Sans", -apple-system, sans-serif';
         ctx.fillText(
           remainingMl === 0
             ? 'Daily hydration milestone completed'
@@ -610,11 +610,11 @@ export function ShareHydrationModal({
         ctx.textBaseline = 'alphabetic';
 
         ctx.fillStyle = pal.textSecondary;
-        ctx.font = '600 22px "DM Sans", -apple-system, sans-serif';
-        ctx.fillText('CONSUMED TODAY', textX, cardTop + 104);
+        ctx.font = '500 22px "IBM Plex Sans", -apple-system, sans-serif';
+        ctx.fillText('Consumed Today', textX, cardTop + 104);
 
         ctx.fillStyle = pal.textPrimary;
-        ctx.font = '700 62px "DM Mono", monospace';
+        ctx.font = '600 62px "Plus Jakarta Sans", "IBM Plex Sans", sans-serif';
         ctx.fillText(
           `${hydration.consumedMl.toLocaleString()} ml`,
           textX,
@@ -622,7 +622,7 @@ export function ShareHydrationModal({
         );
 
         ctx.fillStyle = pal.textSecondary;
-        ctx.font = '500 25px "DM Sans", -apple-system, sans-serif';
+        ctx.font = '400 25px "IBM Plex Sans", -apple-system, sans-serif';
         ctx.fillText(
           `Target: ${profile.dailyGoalMl.toLocaleString()} ml`,
           textX,
@@ -631,7 +631,7 @@ export function ShareHydrationModal({
 
         // Status line
         ctx.fillStyle = pal.accent;
-        ctx.font = '600 25px "DM Sans", -apple-system, sans-serif';
+        ctx.font = '600 25px "IBM Plex Sans", -apple-system, sans-serif';
         ctx.fillText(
           remainingMl === 0
             ? 'Goal completed for today'
@@ -641,7 +641,7 @@ export function ShareHydrationModal({
         );
 
         ctx.fillStyle = pal.textSecondary;
-        ctx.font = '500 22px "DM Sans", -apple-system, sans-serif';
+        ctx.font = '400 22px "IBM Plex Sans", -apple-system, sans-serif';
         ctx.fillText(
           `${hydration.entries.length} refill${hydration.entries.length === 1 ? '' : 's'} logged today`,
           textX,
@@ -683,11 +683,11 @@ export function ShareHydrationModal({
         ctx.textAlign = 'center';
         ctx.textBaseline = 'alphabetic';
         ctx.fillStyle = pal.textPrimary;
-        ctx.font = '700 42px "DM Mono", monospace';
+        ctx.font = '600 42px "Plus Jakarta Sans", "IBM Plex Sans", sans-serif';
         ctx.fillText(st.value, sx + statW / 2, statsTop + 76);
 
         ctx.fillStyle = pal.textSecondary;
-        ctx.font = '600 18px "DM Sans", -apple-system, sans-serif';
+        ctx.font = '500 18px "IBM Plex Sans", -apple-system, sans-serif';
         ctx.fillText(st.label, sx + statW / 2, statsTop + 114);
       });
 
@@ -697,7 +697,7 @@ export function ShareHydrationModal({
         ctx.textAlign = 'left';
         ctx.textBaseline = 'alphabetic';
         ctx.fillStyle = pal.textPrimary;
-        ctx.font = '500 28px "DM Sans", -apple-system, sans-serif';
+        ctx.font = '400 28px "IBM Plex Sans", -apple-system, sans-serif';
         drawWrappedText(ctx, `“${safeCaption}”`, pad, capY, width - pad * 2, 38, 2);
       }
     } else {
@@ -736,7 +736,7 @@ export function ShareHydrationModal({
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = pal.textSecondary;
-        ctx.font = '500 26px "DM Sans", -apple-system, sans-serif';
+        ctx.font = '500 26px "IBM Plex Sans", -apple-system, sans-serif';
         ctx.fillText(
           'Waterholic Studio Preview',
           imgBoxX + imgBoxW / 2,
@@ -750,9 +750,9 @@ export function ShareHydrationModal({
       ctx.textAlign = 'left';
       ctx.textBaseline = 'alphabetic';
       ctx.fillStyle = pal.accent;
-      ctx.font = '600 22px "DM Sans", -apple-system, sans-serif';
+      ctx.font = '600 22px "IBM Plex Sans", -apple-system, sans-serif';
       ctx.fillText(
-        `${catMeta.shortName.toUpperCase()}  ·  ${selectedProduct.variety.toUpperCase()}`,
+        `${catMeta.shortName}  ·  ${selectedProduct.variety}`,
         pad,
         infoTop
       );
@@ -760,13 +760,13 @@ export function ShareHydrationModal({
       // Price aligned right
       ctx.textAlign = 'right';
       ctx.fillStyle = pal.textPrimary;
-      ctx.font = '700 42px "DM Mono", monospace';
+      ctx.font = '600 42px "Plus Jakarta Sans", "IBM Plex Sans", sans-serif';
       ctx.fillText(`$${selectedProduct.price}`, width - pad, infoTop + 10);
 
       // Product Title
       ctx.textAlign = 'left';
       ctx.fillStyle = pal.textPrimary;
-      ctx.font = '700 46px "DM Sans", -apple-system, sans-serif';
+      ctx.font = '600 46px "Plus Jakarta Sans", "IBM Plex Sans", sans-serif';
       const afterTitleY = drawWrappedText(
         ctx,
         selectedProduct.name,
@@ -792,7 +792,7 @@ export function ShareHydrationModal({
       }
 
       ctx.fillStyle = pal.textSecondary;
-      ctx.font = '500 25px "DM Sans", -apple-system, sans-serif';
+      ctx.font = '500 25px "IBM Plex Sans", -apple-system, sans-serif';
       ctx.fillText(
         `${activeFinish?.name ?? 'Signature'}  ·  ${selectedProduct.capacity}  ·  ${selectedProduct.highlightSpec}`,
         pad + 34,
@@ -802,7 +802,7 @@ export function ShareHydrationModal({
       // Rating & User Attribution
       const attrY = metaY + 48;
       ctx.fillStyle = pal.textPrimary;
-      ctx.font = '600 24px "DM Sans", -apple-system, sans-serif';
+      ctx.font = '600 24px "IBM Plex Sans", -apple-system, sans-serif';
       ctx.fillText(
         `★ ${selectedProduct.rating.toFixed(1)} (${selectedProduct.reviews})  ·  Picked by ${profile.name}`,
         pad,
@@ -811,7 +811,7 @@ export function ShareHydrationModal({
 
       if (safeCaption) {
         ctx.fillStyle = pal.textSecondary;
-        ctx.font = '500 26px "DM Sans", -apple-system, sans-serif';
+        ctx.font = '400 26px "IBM Plex Sans", -apple-system, sans-serif';
         drawWrappedText(
           ctx,
           `“${safeCaption}”`,
@@ -831,8 +831,8 @@ export function ShareHydrationModal({
     ctx.fillStyle = pal.textSecondary;
     ctx.font =
       mode === 'product'
-        ? '500 20px "DM Mono", monospace'
-        : '500 22px "DM Sans", -apple-system, sans-serif';
+        ? '500 20px "IBM Plex Mono", monospace'
+        : '500 22px "IBM Plex Sans", -apple-system, sans-serif';
     ctx.fillText(
       mode === 'product' ? shortProductLinkLabel : 'Pure hydration, carried daily.',
       pad,
@@ -841,8 +841,8 @@ export function ShareHydrationModal({
 
     ctx.textAlign = 'right';
     ctx.fillStyle = pal.accent;
-    ctx.font = '600 22px "DM Mono", monospace';
-    ctx.fillText('#WATERHOLIC', width - pad, footerY);
+    ctx.font = '600 22px "IBM Plex Sans", -apple-system, sans-serif';
+    ctx.fillText('#Waterholic', width - pad, footerY);
   }, [
     aspect,
     paletteId,

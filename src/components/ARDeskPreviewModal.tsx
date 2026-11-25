@@ -923,7 +923,7 @@ export function ARDeskPreviewModal({
     ctx.save();
     ctx.fillStyle = 'rgba(10, 24, 38, 0.78)';
     const label = `WATERHOLIC AR · ${currentFinishSpec.label.toUpperCase()} · ${currentSizeSpec.label} (${currentSizeSpec.heightCm} CM)`;
-    ctx.font = `600 ${fontSize}px "DM Mono", monospace`;
+    ctx.font = `500 ${fontSize}px "IBM Plex Mono", monospace`;
     const textW = ctx.measureText(label).width;
     ctx.beginPath();
     ctx.roundRect(pad, out.height - pad - fontSize * 2.1, textW + pad * 1.4, fontSize * 2.1, 8);

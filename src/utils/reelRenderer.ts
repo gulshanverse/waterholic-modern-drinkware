@@ -208,7 +208,7 @@ export async function renderMotionReelVideo(
     // Top-left crisp WATERHOLIC droplet watermark
     const pad = Math.round(width * 0.045);
     ctx.fillStyle = 'rgba(245, 250, 253, 0.92)';
-    ctx.font = `700 ${Math.round(width * 0.022)}px "DM Sans", sans-serif`;
+    ctx.font = `600 ${Math.round(width * 0.022)}px "Plus Jakarta Sans", "IBM Plex Sans", sans-serif`;
     ctx.letterSpacing = '0.18em';
     ctx.fillText('WATERHOLIC', pad, pad + Math.round(width * 0.02));
 
@@ -226,7 +226,7 @@ export async function renderMotionReelVideo(
     // Headline
     ctx.fillStyle = '#F8FCFF';
     const titleSize = aspectRatio === '16:9' ? 46 : 38;
-    ctx.font = `700 ${titleSize}px "DM Sans", sans-serif`;
+    ctx.font = `600 ${titleSize}px "Plus Jakarta Sans", "IBM Plex Sans", sans-serif`;
     ctx.fillText(
       choreography.headline.toUpperCase(),
       pad,
@@ -237,7 +237,7 @@ export async function renderMotionReelVideo(
     // Subline
     ctx.fillStyle = 'rgba(226, 240, 252, 0.88)';
     const subSize = aspectRatio === '16:9' ? 21 : 19;
-    ctx.font = `400 ${subSize}px "DM Sans", sans-serif`;
+    ctx.font = `400 ${subSize}px "IBM Plex Sans", sans-serif`;
     ctx.fillText(
       choreography.subline,
       pad,
