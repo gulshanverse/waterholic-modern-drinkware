@@ -13,6 +13,7 @@ interface BottleColorImageProps {
   loading?: 'lazy' | 'eager';
   maxDimension?: number;
   showShimmer?: boolean;
+  draggable?: boolean;
   onError?: () => void;
 }
 
@@ -30,6 +31,7 @@ export function BottleColorImage({
   loading,
   maxDimension = 560,
   showShimmer = true,
+  draggable,
   onError,
 }: BottleColorImageProps) {
   const needsRecolor = Boolean(finish && finish.filter);
@@ -93,6 +95,7 @@ export function BottleColorImage({
         src={displaySrc}
         alt={alt}
         loading={loading}
+        draggable={draggable}
         referrerPolicy="no-referrer"
         className={`${className ?? ''}${isLoaded ? ' is-img-ready' : ' is-img-pending'}`.trim()}
         style={style}

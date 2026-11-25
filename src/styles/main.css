@@ -2188,10 +2188,15 @@ a {
 }
 
 .product-card-media-inner,
+.product-card-swipe-lift,
 .product-card-bottle-wrap {
   width: 100%;
   height: 100%;
   will-change: transform;
+}
+
+.product-card-swipe-lift {
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .product-card-sheen {
@@ -2213,7 +2218,136 @@ a {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  user-select: none;
+  -webkit-user-drag: none;
   transition: filter 220ms var(--ease-out);
+}
+
+.product-card-media.is-swiping .product-card-img-btn {
+  cursor: grabbing;
+}
+
+.product-card-media.is-swiping .product-card-swipe-lift {
+  transition: none;
+}
+
+.product-card-media .gsap-swipe-haptic-ring {
+  inset: 0;
+  border-radius: 0;
+  border-width: 2.5px;
+}
+
+/* Measured bottom scrim cue for swipe-up quick-add (zero pill enclosure) */
+.product-swipe-cue {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: 24px 14px 10px;
+  background: linear-gradient(
+    to top,
+    rgba(6, 18, 32, 0.78) 0%,
+    rgba(6, 18, 32, 0.36) 58%,
+    transparent 100%
+  );
+  color: rgba(248, 252, 255, 0.92);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(0, 6px, 0);
+  transition:
+    opacity 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    background 180ms ease;
+}
+
+@media (hover: hover) {
+  .product-card:hover .product-swipe-cue,
+  .product-card-img-btn:focus-visible .product-swipe-cue {
+    opacity: 0.92;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (hover: none) {
+  .product-swipe-cue {
+    opacity: 0.74;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.product-swipe-cue.is-dragging,
+.product-swipe-cue.is-armed,
+.product-swipe-cue.is-confirmed {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+.product-swipe-cue.is-armed {
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--accent) 88%, #041322) 0%,
+    color-mix(in srgb, var(--accent) 44%, rgba(6, 18, 32, 0.4)) 62%,
+    transparent 100%
+  );
+  color: #ffffff;
+}
+
+.product-swipe-cue.is-confirmed {
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--accent) 92%, #06281e) 0%,
+    color-mix(in srgb, var(--accent) 46%, rgba(6, 18, 32, 0.35)) 64%,
+    transparent 100%
+  );
+  color: #ffffff;
+}
+
+.product-swipe-cue-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.product-swipe-icon {
+  flex-shrink: 0;
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.product-swipe-cue.is-armed .product-swipe-icon {
+  transform: translate3d(0, -2px, 0);
+}
+
+.product-swipe-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: color-mix(in srgb, var(--accent) 72%, #ffffff);
+  transform-origin: center;
+  transform: scaleX(0);
+  transition: transform 120ms ease-out;
+  will-change: transform;
+}
+
+.product-swipe-cue.is-dragging .product-swipe-progress {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-swipe-cue,
+  .product-swipe-icon,
+  .product-swipe-progress {
+    transition: none;
+  }
 }
 
 .product-img-fallback {
@@ -5971,6 +6105,49 @@ a {
   letter-spacing: 0.08em;
   color: var(--text-secondary);
   white-space: nowrap;
+}
+
+.studio3d-engraving-input {
+  width: 112px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.studio3d-engraving-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.studio3d-reset-btn.is-customized {
+  border-color: color-mix(in srgb, var(--accent) 46%, var(--border));
+  color: var(--text-primary);
+}
+
+.studio3d-reset-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.studio3d-reset-spin {
+  animation: studio3dResetCcw 0.44s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes studio3dResetCcw {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
 }
 
 .studio3d-swatches {
@@ -11992,6 +12169,981 @@ body {
 @media (hover: none), (pointer: coarse) {
   .ambient-cursor-glow {
     display: none;
+  }
+}
+
+/* ==========================================================================
+   Dynamic Circular Daily Hydration Progress Indicator (Bottle Configurator)
+   ========================================================================== */
+.hydration-ring-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  will-change: transform;
+}
+
+.hydration-ring-svg {
+  display: block;
+  overflow: visible;
+}
+
+.hydration-ring-track,
+.hydration-ring-projected,
+.hydration-ring-fill {
+  transition: stroke-dashoffset 460ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hydration-ring--on-primary .hydration-ring-track {
+  stroke: rgba(255, 255, 255, 0.24);
+}
+
+.hydration-ring--on-primary .hydration-ring-projected {
+  stroke: rgba(255, 255, 255, 0.44);
+}
+
+.hydration-ring--on-primary .hydration-ring-fill {
+  stroke: #ffffff;
+}
+
+.hydration-ring--on-primary .hydration-ring-pct {
+  color: #ffffff;
+}
+
+.hydration-ring--surface .hydration-ring-track {
+  stroke: color-mix(in srgb, var(--accent) 18%, var(--border));
+}
+
+.hydration-ring--surface .hydration-ring-projected {
+  stroke: color-mix(in srgb, var(--accent) 36%, transparent);
+}
+
+.hydration-ring--surface .hydration-ring-fill {
+  stroke: var(--accent);
+}
+
+.hydration-ring--surface .hydration-ring-pct {
+  color: var(--text-primary);
+}
+
+.hydration-ring-wrap.is-complete.hydration-ring--surface .hydration-ring-fill {
+  stroke: #10b981;
+}
+
+.hydration-ring-pct {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.order-cta-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.order-hydration-float {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--accent) 10%, rgba(7, 22, 38, 0.08));
+  opacity: 0.8;
+  transform: translate3d(0, 4px, 0);
+  transition:
+    opacity 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.order-hydration-float.is-visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  border-color: color-mix(in srgb, var(--accent) 44%, var(--border));
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--accent) 16%, rgba(7, 22, 38, 0.1));
+}
+
+.order-hydration-float-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.order-hydration-float-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.25;
+}
+
+.order-hydration-float-sep {
+  color: var(--text-muted);
+}
+
+.order-hydration-float-ml {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.order-hydration-float-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+.order-hydration-sip-btn {
+  flex-shrink: 0;
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    transform 140ms ease;
+}
+
+.order-hydration-sip-btn:hover {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: var(--accent);
+}
+
+.order-hydration-sip-btn:active {
+  transform: scale(0.95);
+}
+
+.order-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding-block: 14px;
+  padding-inline: 22px;
+}
+
+.order-add-hydration-dial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.24);
+  opacity: 0.88;
+  transition: opacity 200ms ease;
+}
+
+.order-add-btn.is-hydration-active .order-add-hydration-dial,
+.order-add-btn:hover .order-add-hydration-dial {
+  opacity: 1;
+}
+
+.studio3d-add-btn {
+  gap: 10px;
+}
+
+.studio3d-add-btn .hydration-ring-wrap {
+  margin-left: 2px;
+}
+
+/* ==========================================================================
+   Persistent Floating Quick-Log Hydration Dock (CatalogSection)
+   ========================================================================== */
+.catalog-hydration-dock-anchor {
+  position: sticky;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 42;
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 28px;
+  pointer-events: none;
+}
+
+.catalog-hydration-dock {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px 7px 9px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--border-strong));
+  background: var(--glass-bg);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow:
+    0 14px 34px rgba(7, 22, 38, 0.14),
+    0 2px 8px color-mix(in srgb, var(--accent) 12%, transparent);
+  max-width: calc(100vw - 96px);
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.catalog-hydration-dock:hover {
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--border-strong));
+}
+
+.catalog-hydration-dock.is-minimized {
+  gap: 6px;
+  padding: 6px 12px 6px 7px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.catalog-hydration-mini-plus {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.catalog-hydration-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 2px 4px 2px 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.catalog-hydration-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.catalog-hydration-heading {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text-primary);
+}
+
+.catalog-hydration-ml {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--text-secondary);
+}
+
+.catalog-hydration-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border);
+}
+
+.catalog-quicklog-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 11px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    transform 130ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.catalog-quicklog-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.catalog-quicklog-btn:active {
+  transform: scale(0.93);
+}
+
+.catalog-quicklog-btn.is-flash {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+.catalog-hydration-minimize {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.catalog-hydration-minimize:hover {
+  color: var(--text-primary);
+  background: var(--surface-elevated);
+  border-color: var(--border);
+}
+
+@media (max-width: 768px) {
+  .catalog-hydration-dock-anchor {
+    bottom: max(16px, env(safe-area-inset-bottom));
+    padding-right: 60px;
+  }
+
+  .catalog-hydration-dock {
+    gap: 8px;
+    padding: 5px 8px 5px 7px;
+    max-width: 100%;
+  }
+
+  .catalog-hydration-meta {
+    display: none;
+  }
+
+  .catalog-hydration-actions {
+    padding-left: 6px;
+  }
+
+  .catalog-quicklog-btn {
+    min-height: 40px;
+    padding: 8px 11px;
+  }
+
+  .catalog-hydration-minimize {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+
+@media (max-width: 440px) {
+  .catalog-quicklog-btn--lg {
+    display: none;
+  }
+}
+
+/* ============================================================================
+   AR "VIEW ON YOUR DESK" PREVIEW MODAL (Zero backdrop-filter over WebGL)
+   ============================================================================ */
+
+.studio3d-ar-btn {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border)) !important;
+  color: var(--accent) !important;
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface)) !important;
+}
+
+.studio3d-ar-btn:hover {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent-text) !important;
+}
+
+.ar-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(6, 14, 24, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(10px, 2vw, 24px);
+}
+
+.ar-modal-shell {
+  width: min(1180px, 100%);
+  height: min(820px, 92dvh);
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+  color: var(--text-primary);
+  overflow: hidden;
+  box-shadow: 0 32px 72px rgba(4, 12, 22, 0.45);
+}
+
+.ar-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.ar-modal-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ar-modal-kicker {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.ar-modal-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ar-mode-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.ar-mode-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+.ar-mode-tab:hover {
+  color: var(--text-primary);
+  background: var(--surface);
+}
+
+.ar-mode-tab.is-active {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.ar-modal-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ar-add-btn {
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+.ar-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.ar-close-btn:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-elevated);
+}
+
+.ar-stage-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 380px;
+  background: #0d1624;
+  overflow: hidden;
+}
+
+.ar-camera-video,
+.ar-camera-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.ar-webgl-host {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  touch-action: none;
+}
+
+.ar-webgl-host.is-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.ar-webgl-host canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Solid translucent HUD overlays (no backdrop-filter over active WebGL) */
+.ar-spec-hud {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: min(460px, calc(100% - 28px));
+  pointer-events: none;
+}
+
+.ar-spec-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(11, 22, 36, 0.88);
+  color: #f0f9ff;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.ar-spec-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #93c5fd;
+}
+
+.ar-spec-fit {
+  color: #cbd5e1;
+}
+
+.ar-spec-fit.is-yes {
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #bae6fd;
+}
+
+.ar-stage-actions {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: min(460px, calc(100% - 28px));
+}
+
+.ar-drag-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(11, 22, 36, 0.84);
+  color: #e2e8f0;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.ar-hud-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  background: rgba(11, 22, 36, 0.9);
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.ar-hud-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.ar-camera-fallback,
+.ar-camera-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  width: min(440px, calc(100% - 32px));
+  padding: 20px 22px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(10, 20, 34, 0.94);
+  color: #f0f9ff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.ar-camera-fallback strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.ar-camera-fallback p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #cbd5e1;
+}
+
+.ar-camera-fallback-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ar-camera-loading {
+  flex-direction: row;
+  justify-content: center;
+  width: auto;
+  padding: 12px 18px;
+  font-size: 13px;
+}
+
+/* Unified collapsible bottom dock inside AR stage (solid surface, zero backdrop-filter) */
+.ar-dock {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 7;
+  width: min(920px, calc(100% - 24px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ar-dock-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border-radius: 10px 10px 0 0;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-bottom: none;
+  background: rgba(11, 22, 36, 0.94);
+  color: #e2e8f0;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ar-dock.is-collapsed .ar-dock-toggle {
+  border-radius: 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.ar-dock-body {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(11, 22, 36, 0.95);
+  color: #f8fafc;
+}
+
+.ar-dock-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ar-dock-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.ar-seg-row,
+.ar-swatch-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.ar-seg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.ar-seg-btn:hover {
+  border-color: rgba(125, 211, 252, 0.55);
+  color: #ffffff;
+}
+
+.ar-seg-btn.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.ar-slider-group {
+  min-width: 132px;
+  flex: 1 1 132px;
+  max-width: 190px;
+}
+
+/* Mode C: Phone QR Handoff Panel */
+.ar-qr-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(18px, 3vw, 36px);
+  overflow-y: auto;
+}
+
+.ar-qr-card {
+  width: min(820px, 100%);
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  gap: clamp(20px, 3vw, 36px);
+  align-items: center;
+  padding: clamp(20px, 3vw, 32px);
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-tinted);
+}
+
+.ar-qr-code-box {
+  width: 248px;
+  height: 248px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ar-qr-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.ar-qr-placeholder {
+  color: #0a2239;
+}
+
+.ar-qr-info h4 {
+  margin: 6px 0 8px;
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.ar-qr-info p {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.ar-qr-specs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.ar-qr-spec-item {
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ar-qr-spec-item span {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.ar-qr-spec-item strong {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.ar-qr-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.ar-qr-footnote {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0 !important;
+  font-size: 12px !important;
+  color: var(--text-muted) !important;
+}
+
+@media (max-width: 820px) {
+  .ar-modal-shell {
+    height: 94dvh;
+    border-radius: 16px;
+  }
+
+  .ar-modal-header {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .ar-modal-title {
+    font-size: 14.5px;
+  }
+
+  .ar-mode-tabs {
+    order: 3;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .ar-mode-tab {
+    flex: 1;
+    justify-content: center;
+    padding: 7px 8px;
+    font-size: 12px;
+  }
+
+  .ar-drag-hint {
+    display: none;
+  }
+
+  .ar-spec-fit {
+    display: none;
+  }
+
+  .ar-qr-card {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: left;
+  }
+
+  .ar-qr-code-box {
+    width: 210px;
+    height: 210px;
   }
 }
 

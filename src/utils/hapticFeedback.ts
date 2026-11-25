@@ -9,19 +9,32 @@ import gsap from 'gsap';
  * Fully respects prefers-reduced-motion and cleans up inline transforms on
  * completion so hover/focus CSS transitions remain crisp.
  */
+export function triggerMicroHapticTick() {
+  if (typeof window === 'undefined') return;
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      navigator.vibrate(6);
+    }
+  } catch {
+    // Ignore unsupported or restricted vibration APIs
+  }
+}
+
 export function triggerAddToBagHaptic(
   buttonEl: HTMLElement | null | undefined,
-  options?: { pulseBagTrigger?: boolean }
+  options?: { pulseBagTrigger?: boolean; skipVibrate?: boolean }
 ) {
   if (typeof window === 'undefined') return;
 
   // Optional subtle hardware vibration on supported mobile devices
-  try {
-    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-      navigator.vibrate(12);
+  if (!options?.skipVibrate) {
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        navigator.vibrate(12);
+      }
+    } catch {
+      // Ignore unsupported or restricted vibration APIs
     }
-  } catch {
-    // Ignore unsupported or restricted vibration APIs
   }
 
   const reducedMotion = window.matchMedia(
@@ -119,3 +132,85 @@ export function triggerAddToBagHaptic(
     }
   }
 }
+
+/**
+ * Triggers instant tactile haptic feedback when a user completes a swipe-up
+ * gesture on a catalog product image: crisp hardware double-pulse vibration,
+ * upward spring launch & settle on the bottle image, an expanding accent pulse
+ * ring across the media surface, and synced Add to Bag + header Bag pulses.
+ */
+export function triggerSwipeUpAddHaptic(
+  mediaEl: HTMLElement | null | undefined,
+  bottleWrapEl: HTMLElement | null | undefined,
+  addBtnEl?: HTMLElement | null
+) {
+  if (typeof window === 'undefined') return;
+
+  // Distinct crisp double-pulse hardware haptic on supported devices
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      navigator.vibrate([14, 24, 10]);
+    }
+  } catch {
+    // Ignore unsupported or restricted vibration APIs
+  }
+
+  const reducedMotion = window.matchMedia(
+    '(prefers-reduced-motion: reduce)'
+  ).matches;
+
+  if (!reducedMotion) {
+    if (mediaEl) {
+      const ring = document.createElement('span');
+      ring.className = 'gsap-haptic-ring gsap-swipe-haptic-ring';
+      ring.setAttribute('aria-hidden', 'true');
+      mediaEl.appendChild(ring);
+
+      gsap.fromTo(
+        ring,
+        { scale: 0.92, opacity: 0.78 },
+        {
+          scale: 1.06,
+          opacity: 0,
+          duration: 0.46,
+          ease: 'power2.out',
+          onComplete: () => {
+            ring.remove();
+          },
+        }
+      );
+    }
+
+    if (bottleWrapEl) {
+      gsap.killTweensOf(bottleWrapEl, 'y,scale');
+      gsap
+        .timeline({
+          onComplete: () => {
+            gsap.set(bottleWrapEl, { clearProps: 'transform' });
+          },
+        })
+        .to(bottleWrapEl, {
+          y: -16,
+          scale: 1.04,
+          duration: 0.13,
+          ease: 'power3.out',
+        })
+        .to(bottleWrapEl, {
+          y: 2,
+          scale: 0.985,
+          duration: 0.12,
+          ease: 'power2.inOut',
+        })
+        .to(bottleWrapEl, {
+          y: 0,
+          scale: 1,
+          duration: 0.24,
+          ease: 'back.out(2.2)',
+        });
+    }
+  }
+
+  // Sync card Add to Bag button & header Bag trigger without double-vibrating
+  triggerAddToBagHaptic(addBtnEl, { pulseBagTrigger: true, skipVibrate: true });
+}
+

@@ -13,10 +13,14 @@ import {
   Layers,
   Loader2,
   RotateCcw,
+  Scan,
   ShoppingBag,
   Sparkles,
   X,
 } from 'lucide-react';
+import { HydrationProgressRing } from './HydrationProgressRing';
+import { ARDeskPreviewModal, type ArPreviewMode } from './ARDeskPreviewModal';
+import { triggerAddToBagHaptic } from '../utils/hapticFeedback';
 
 export type StudioFinishKey =
   | 'blue'
@@ -26,8 +30,15 @@ export type StudioFinishKey =
   | 'basalt'
   | 'glacier';
 
-type StudioSizeKey = '750 ml' | '950 ml' | '1.2 L';
+export type StudioSizeKey = '750 ml' | '950 ml' | '1.2 L';
 type CameraPresetKey = 'hero' | 'cap' | 'base' | 'cutaway';
+
+const DEFAULT_STUDIO_FINISH: StudioFinishKey = 'blue';
+const DEFAULT_STUDIO_SIZE: StudioSizeKey = '950 ml';
+const DEFAULT_ENGRAVING_ENABLED = true;
+const DEFAULT_ENGRAVING_TEXT = 'ALEX';
+const DEFAULT_ENGRAVING_FONT: 'sans' | 'serif' | 'mono' = 'serif';
+const DEFAULT_ENGRAVING_ORIENTATION: 'vertical' | 'horizontal' = 'vertical';
 
 interface StudioFinishSpec {
   id: StudioFinishKey;
@@ -235,7 +246,15 @@ interface BottleStudio3DProps {
   theme: 'light' | 'dark';
   daypart?: 'morning' | 'day' | 'evening';
   activeFinish: StudioFinishKey;
+  activeSize?: StudioSizeKey;
+  engravingEnabled?: boolean;
+  engravingText?: string;
+  engravingFont?: 'sans' | 'serif' | 'mono';
+  engravingOrientation?: 'vertical' | 'horizontal';
   onSyncFinish: (finish: StudioFinishKey) => void;
+  onSyncSize?: (size: StudioSizeKey, price: number) => void;
+  onSyncEngraving?: (next: { enabled: boolean; text: string }) => void;
+  onResetAllConfigs?: () => void;
   onAddConfiguredToBag: (config: {
     finish: StudioFinishKey;
     finishName: string;
@@ -243,8 +262,14 @@ interface BottleStudio3DProps {
     isTransparent?: boolean;
     sizeLabel: StudioSizeKey;
     price: number;
+    engravingText?: string;
   }) => void;
   onSnapshotSaved?: (msg: string) => void;
+  consumedMl?: number;
+  dailyGoalMl?: number;
+  autoOpenArMode?: ArPreviewMode | null;
+  initialShowBoot?: boolean;
+  onConsumeAutoOpenAr?: () => void;
 }
 
 function createBrandWrapTexture(
@@ -252,7 +277,8 @@ function createBrandWrapTexture(
   inkHex: string,
   sizeLabel: string,
   isGlass: boolean,
-  resolution = 1024
+  resolution = 1024,
+  engraving?: { text: string; font: 'sans' | 'serif' | 'mono' }
 ): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
   canvas.width = resolution;
@@ -323,6 +349,24 @@ function createBrandWrapTexture(
 
   ctx.font = '500 22px "DM Mono", monospace';
   ctx.fillText(`18/8 VACUUM  ·  ${sizeLabel}`, cx, cy + 122);
+
+  // Optional custom laser monogram etched cleanly beneath the capacity stamp
+  const cleanedEngraving = engraving?.text.trim().slice(0, 12) ?? '';
+  if (cleanedEngraving) {
+    ctx.globalAlpha = isGlass ? 0.72 : 0.82;
+    const fontFamily =
+      engraving?.font === 'serif'
+        ? '600 32px Georgia, "Times New Roman", serif'
+        : engraving?.font === 'mono'
+          ? '600 26px "DM Mono", monospace'
+          : '600 28px "DM Sans", -apple-system, sans-serif';
+    ctx.font = fontFamily;
+    ctx.fillText(
+      cleanedEngraving.toUpperCase().split('').join(' '),
+      cx,
+      cy + 188
+    );
+  }
   ctx.restore();
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -352,15 +396,33 @@ export function BottleStudio3D({
   theme,
   daypart = 'day',
   activeFinish,
+  activeSize = DEFAULT_STUDIO_SIZE,
+  engravingEnabled = DEFAULT_ENGRAVING_ENABLED,
+  engravingText = DEFAULT_ENGRAVING_TEXT,
+  engravingFont = DEFAULT_ENGRAVING_FONT,
+  engravingOrientation = DEFAULT_ENGRAVING_ORIENTATION,
   onSyncFinish,
+  onSyncSize,
+  onSyncEngraving,
+  onResetAllConfigs,
   onAddConfiguredToBag,
   onSnapshotSaved,
+  consumedMl = 750,
+  dailyGoalMl = 2500,
+  autoOpenArMode = null,
+  initialShowBoot,
+  onConsumeAutoOpenAr,
 }: BottleStudio3DProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const [studioFinish, setStudioFinish] = useState<StudioFinishKey>(activeFinish);
-  const [studioSize, setStudioSize] = useState<StudioSizeKey>('950 ml');
+  const [studioSize, setStudioSize] = useState<StudioSizeKey>(activeSize);
+  const [studioEngraving, setStudioEngraving] = useState<string>(
+    engravingEnabled ? engravingText : ''
+  );
   const [exploded, setExploded] = useState<number>(0);
-  const [showBoot, setShowBoot] = useState<boolean>(true);
+  const [showBoot, setShowBoot] = useState<boolean>(
+    initialShowBoot !== undefined ? initialShowBoot : true
+  );
   const [autoSpin, setAutoSpin] = useState<boolean>(true);
   const [chillMist, setChillMist] = useState<boolean>(true);
   const [cameraPreset, setCameraPreset] = useState<CameraPresetKey>('hero');
@@ -368,6 +430,48 @@ export function BottleStudio3D({
   const [hoveredPart, setHoveredPart] = useState<BottlePartId | null>(null);
   const [pinnedPart, setPinnedPart] = useState<BottlePartId | null>(null);
   const [exportingGlb, setExportingGlb] = useState<boolean>(false);
+  const [resetSpinning, setResetSpinning] = useState<boolean>(false);
+  const [arModalOpen, setArModalOpen] = useState<boolean>(false);
+  const [arInitialMode, setArInitialMode] = useState<ArPreviewMode>('desk');
+  const [interactSignal, setInteractSignal] = useState<number>(0);
+  const [studioInteracting, setStudioInteracting] = useState<boolean>(false);
+  const interactTimerRef = useRef<number | null>(null);
+  const resetTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (initialShowBoot !== undefined) {
+      setShowBoot(initialShowBoot);
+    }
+  }, [initialShowBoot]);
+
+  useEffect(() => {
+    if (!autoOpenArMode) return;
+    setArInitialMode(autoOpenArMode);
+    setArModalOpen(true);
+    onConsumeAutoOpenAr?.();
+  }, [autoOpenArMode, onConsumeAutoOpenAr]);
+
+  const pulseStudioInteract = () => {
+    setInteractSignal((n) => n + 1);
+    setStudioInteracting(true);
+    if (interactTimerRef.current !== null) {
+      window.clearTimeout(interactTimerRef.current);
+    }
+    interactTimerRef.current = window.setTimeout(() => {
+      setStudioInteracting(false);
+    }, 3600);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (interactTimerRef.current !== null) {
+        window.clearTimeout(interactTimerRef.current);
+      }
+      if (resetTimerRef.current !== null) {
+        window.clearTimeout(resetTimerRef.current);
+      }
+    };
+  }, []);
 
   const tooltipAnchorRef = useRef<HTMLDivElement | null>(null);
   const tooltipCardRef = useRef<HTMLDivElement | null>(null);
@@ -463,6 +567,8 @@ export function BottleStudio3D({
     daypart,
     studioFinish,
     studioSize,
+    studioEngraving,
+    engravingFont,
     exploded,
     showBoot,
     autoSpin,
@@ -471,7 +577,12 @@ export function BottleStudio3D({
   });
 
   const sceneApiRef = useRef<{
-    updateFinish: (f: StudioFinishKey, s: StudioSizeKey) => void;
+    updateFinish: (
+      f: StudioFinishKey,
+      s: StudioSizeKey,
+      engText: string,
+      engFont: 'sans' | 'serif' | 'mono'
+    ) => void;
     updateTheme: (t: 'light' | 'dark', dp: 'morning' | 'day' | 'evening') => void;
     jumpCamera: (preset: CameraPresetKey) => void;
     capturePng: () => string | null;
@@ -483,23 +594,40 @@ export function BottleStudio3D({
   }, [activeFinish]);
 
   useEffect(() => {
+    setStudioSize(activeSize);
+  }, [activeSize]);
+
+  useEffect(() => {
+    setStudioEngraving(engravingEnabled ? engravingText : '');
+  }, [engravingEnabled, engravingText]);
+
+  useEffect(() => {
     stateRef.current = {
       theme,
       daypart,
       studioFinish,
       studioSize,
+      studioEngraving,
+      engravingFont,
       exploded,
       showBoot,
       autoSpin,
       chillMist,
       cameraPreset,
     };
-    sceneApiRef.current?.updateFinish(studioFinish, studioSize);
+    sceneApiRef.current?.updateFinish(
+      studioFinish,
+      studioSize,
+      studioEngraving,
+      engravingFont
+    );
   }, [
     theme,
     daypart,
     studioFinish,
     studioSize,
+    studioEngraving,
+    engravingFont,
     exploded,
     showBoot,
     autoSpin,
@@ -687,7 +815,12 @@ export function BottleStudio3D({
       initialFinishSpec.hex,
       initialFinishSpec.logoInk,
       SIZE_SPECS[stateRef.current.studioSize].label,
-      Boolean(initialFinishSpec.isGlass)
+      Boolean(initialFinishSpec.isGlass),
+      1024,
+      {
+        text: stateRef.current.studioEngraving,
+        font: stateRef.current.engravingFont,
+      }
     );
     const bodyMat = new THREE.MeshPhysicalMaterial({
       color: 0xffffff,
@@ -1005,7 +1138,12 @@ export function BottleStudio3D({
     const targetCamPos = new THREE.Vector3(0.45, 2.35, 5.1);
     const targetLookAt = new THREE.Vector3(0, 1.55, 0);
 
-    const applyFinishAndSize = (fKey: StudioFinishKey, sKey: StudioSizeKey) => {
+    const applyFinishAndSize = (
+      fKey: StudioFinishKey,
+      sKey: StudioSizeKey,
+      engText: string,
+      engFont: 'sans' | 'serif' | 'mono'
+    ) => {
       const spec =
         STUDIO_FINISHES.find((f) => f.id === fKey) || STUDIO_FINISHES[0];
       const sz = SIZE_SPECS[sKey];
@@ -1014,7 +1152,9 @@ export function BottleStudio3D({
         spec.hex,
         spec.logoInk,
         sz.label,
-        Boolean(spec.isGlass)
+        Boolean(spec.isGlass),
+        1024,
+        { text: engText, font: engFont }
       );
       brandTexture.dispose();
       brandTexture = nextTex;
@@ -1105,7 +1245,8 @@ export function BottleStudio3D({
           spec.logoInk,
           sz.label,
           Boolean(spec.isGlass),
-          2048
+          2048,
+          { text: s.studioEngraving, font: s.engravingFont }
         );
 
         const exportRoot = new THREE.Group();
@@ -1114,6 +1255,7 @@ export function BottleStudio3D({
           brand: 'Waterholic',
           finish: spec.label,
           capacity: sz.label,
+          engraving: s.studioEngraving.trim() || undefined,
           units: 'meters',
           siliconeBoot: s.showBoot,
           explodedView: s.exploded > 0.06,
@@ -1404,10 +1546,13 @@ export function BottleStudio3D({
     STUDIO_FINISHES.find((f) => f.id === studioFinish) || STUDIO_FINISHES[0];
   const currentSizeSpec = SIZE_SPECS[studioSize];
   const computedPrice = currentSizeSpec.price + (currentSpec.priceDelta ?? 0);
+  const studioCapacityMl =
+    studioSize === '1.2 L' ? 1200 : studioSize === '750 ml' ? 750 : 950;
 
   const handleSelectFinish = (key: StudioFinishKey) => {
     setStudioFinish(key);
     onSyncFinish(key);
+    pulseStudioInteract();
   };
 
   const handleCameraPreset = (preset: CameraPresetKey) => {
@@ -1418,6 +1563,7 @@ export function BottleStudio3D({
       setExploded(0);
     }
     sceneApiRef.current?.jumpCamera(preset);
+    pulseStudioInteract();
   };
 
   const handleSnapshot = () => {
@@ -1462,6 +1608,54 @@ export function BottleStudio3D({
     }
   };
 
+  const isCustomized =
+    studioFinish !== DEFAULT_STUDIO_FINISH ||
+    studioSize !== DEFAULT_STUDIO_SIZE ||
+    engravingEnabled !== DEFAULT_ENGRAVING_ENABLED ||
+    studioEngraving.trim() !== DEFAULT_ENGRAVING_TEXT ||
+    engravingFont !== DEFAULT_ENGRAVING_FONT ||
+    engravingOrientation !== DEFAULT_ENGRAVING_ORIENTATION ||
+    exploded > 0.01 ||
+    !showBoot ||
+    !chillMist ||
+    !autoSpin ||
+    cameraPreset !== 'hero';
+
+  const handleResetAll = () => {
+    setStudioFinish(DEFAULT_STUDIO_FINISH);
+    setStudioSize(DEFAULT_STUDIO_SIZE);
+    setStudioEngraving(DEFAULT_ENGRAVING_TEXT);
+    setExploded(0);
+    setShowBoot(true);
+    setChillMist(true);
+    setAutoSpin(true);
+    setPinnedPart(null);
+    setHoveredPart(null);
+    setCameraPreset('hero');
+
+    onSyncFinish(DEFAULT_STUDIO_FINISH);
+    onSyncSize?.(DEFAULT_STUDIO_SIZE, SIZE_SPECS[DEFAULT_STUDIO_SIZE].price);
+    onSyncEngraving?.({
+      enabled: DEFAULT_ENGRAVING_ENABLED,
+      text: DEFAULT_ENGRAVING_TEXT,
+    });
+    onResetAllConfigs?.();
+    sceneApiRef.current?.jumpCamera('hero');
+    pulseStudioInteract();
+
+    setResetSpinning(true);
+    if (resetTimerRef.current !== null) {
+      window.clearTimeout(resetTimerRef.current);
+    }
+    resetTimerRef.current = window.setTimeout(() => {
+      setResetSpinning(false);
+    }, 480);
+
+    onSnapshotSaved?.(
+      'Reset finish, size, engraving, and 3D controls to defaults'
+    );
+  };
+
   return (
     <section id="studio-3d" className="studio3d-section">
       <div className="container">
@@ -1476,6 +1670,35 @@ export function BottleStudio3D({
             </p>
           </div>
           <div className="studio3d-header-actions">
+            <button
+              type="button"
+              className={`btn btn-ghost studio3d-reset-btn${
+                isCustomized ? ' is-customized' : ''
+              }`}
+              onClick={handleResetAll}
+              aria-label="Reset finish, size, engraving, and 3D studio controls to defaults"
+              title="Revert finish, size, engraving, and 3D view to application defaults"
+            >
+              <RotateCcw
+                size={15}
+                className={resetSpinning ? 'studio3d-reset-spin' : undefined}
+                aria-hidden="true"
+              />
+              Reset
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost studio3d-ar-btn"
+              onClick={() => {
+                setArInitialMode('desk');
+                setArModalOpen(true);
+                pulseStudioInteract();
+              }}
+              title="Preview this exact custom bottle at 1:1 true scale on a desk, through your live camera, or send to your phone via QR"
+            >
+              <Scan size={16} aria-hidden="true" />
+              View on Desk (AR)
+            </button>
             <button
               type="button"
               className="btn btn-ghost studio3d-glb-btn"
@@ -1504,8 +1727,12 @@ export function BottleStudio3D({
             </button>
             <button
               type="button"
-              className="btn btn-primary"
-              onClick={() =>
+              className={`btn btn-primary studio3d-add-btn${
+                studioInteracting ? ' is-hydration-active' : ''
+              }`}
+              onClick={(e) => {
+                triggerAddToBagHaptic(e.currentTarget);
+                pulseStudioInteract();
                 onAddConfiguredToBag({
                   finish: studioFinish,
                   finishName: currentSpec.label,
@@ -1513,11 +1740,20 @@ export function BottleStudio3D({
                   isTransparent: currentSpec.isGlass,
                   sizeLabel: studioSize,
                   price: computedPrice,
-                })
-              }
+                  engravingText: studioEngraving.trim() || undefined,
+                });
+              }}
             >
               <ShoppingBag size={16} aria-hidden="true" />
-              Add 3D Build — ${computedPrice}
+              <span>Add 3D Build — ${computedPrice}</span>
+              <HydrationProgressRing
+                consumedMl={consumedMl}
+                dailyGoalMl={dailyGoalMl}
+                selectedCapacityMl={studioCapacityMl}
+                interactionSignal={interactSignal}
+                size={30}
+                variant="on-primary"
+              />
             </button>
           </div>
         </div>
@@ -1694,13 +1930,45 @@ export function BottleStudio3D({
                           className={`studio3d-size-btn${
                             studioSize === sz ? ' is-active' : ''
                           }`}
-                          onClick={() => setStudioSize(sz)}
+                          onClick={() => {
+                            setStudioSize(sz);
+                            onSyncSize?.(sz, SIZE_SPECS[sz].price);
+                            pulseStudioInteract();
+                          }}
                         >
                           {sz}
                         </button>
                       )
                     )}
                   </div>
+                </div>
+
+                {/* Live Monogram Engraving */}
+                <div className="studio3d-dock-group">
+                  <label
+                    htmlFor="studio3d-engraving-input"
+                    className="studio3d-dock-label"
+                  >
+                    Engraving
+                  </label>
+                  <input
+                    id="studio3d-engraving-input"
+                    type="text"
+                    maxLength={12}
+                    value={studioEngraving}
+                    placeholder="None"
+                    aria-label="Custom laser engraving text on 3D bottle"
+                    className="studio3d-engraving-input"
+                    onChange={(e) => {
+                      const nextVal = e.target.value;
+                      setStudioEngraving(nextVal);
+                      onSyncEngraving?.({
+                        enabled: nextVal.trim().length > 0,
+                        text: nextVal,
+                      });
+                      pulseStudioInteract();
+                    }}
+                  />
                 </div>
 
                 {/* Exploded Thermal Cutaway Slider */}
@@ -1718,7 +1986,10 @@ export function BottleStudio3D({
                     max={1}
                     step={0.01}
                     value={exploded}
-                    onChange={(e) => setExploded(Number(e.target.value))}
+                    onChange={(e) => {
+                      setExploded(Number(e.target.value));
+                      pulseStudioInteract();
+                    }}
                     className="studio3d-range"
                   />
                 </div>
@@ -1728,14 +1999,20 @@ export function BottleStudio3D({
                   <button
                     type="button"
                     className={`studio3d-toggle-btn${showBoot ? ' is-active' : ''}`}
-                    onClick={() => setShowBoot((v) => !v)}
+                    onClick={() => {
+                      setShowBoot((v) => !v);
+                      pulseStudioInteract();
+                    }}
                   >
                     Silicone Boot
                   </button>
                   <button
                     type="button"
                     className={`studio3d-toggle-btn${chillMist ? ' is-active' : ''}`}
-                    onClick={() => setChillMist((v) => !v)}
+                    onClick={() => {
+                      setChillMist((v) => !v);
+                      pulseStudioInteract();
+                    }}
                   >
                     <Sparkles size={13} aria-hidden="true" />
                     Ice Mist
@@ -1743,7 +2020,10 @@ export function BottleStudio3D({
                   <button
                     type="button"
                     className={`studio3d-toggle-btn${autoSpin ? ' is-active' : ''}`}
-                    onClick={() => setAutoSpin((v) => !v)}
+                    onClick={() => {
+                      setAutoSpin((v) => !v);
+                      pulseStudioInteract();
+                    }}
                   >
                     Turntable
                   </button>
@@ -1753,6 +2033,31 @@ export function BottleStudio3D({
           </div>
         </div>
       </div>
+
+      <ARDeskPreviewModal
+        open={arModalOpen}
+        initialMode={arInitialMode}
+        theme={theme}
+        finish={studioFinish}
+        size={studioSize}
+        engravingText={studioEngraving}
+        engravingFont={engravingFont}
+        showBoot={showBoot}
+        exportingGlb={exportingGlb}
+        onClose={() => setArModalOpen(false)}
+        onSelectFinish={(nextFinish) => handleSelectFinish(nextFinish)}
+        onSelectSize={(nextSize) => {
+          setStudioSize(nextSize);
+          onSyncSize?.(nextSize, SIZE_SPECS[nextSize].price);
+          pulseStudioInteract();
+        }}
+        onExportGlb={handleExportGlb}
+        onAddConfiguredToBag={(cfg) => {
+          pulseStudioInteract();
+          onAddConfiguredToBag(cfg);
+        }}
+        onNotify={onSnapshotSaved}
+      />
     </section>
   );
 }

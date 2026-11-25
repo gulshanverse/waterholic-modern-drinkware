@@ -40,6 +40,7 @@ import {
 import { BottleFinderModal } from './components/BottleFinderModal';
 import { FastFlowPriceWave } from './components/FastFlowPriceWave';
 import { AmbientCursorGlow } from './components/AmbientCursorGlow';
+import { HydrationProgressRing } from './components/HydrationProgressRing';
 import {
   DAYPART_META,
   formatShortLocalTime,
@@ -74,6 +75,9 @@ import bottleRiverLogoImg from './assets/images/waterholic_river_logo_bottle_179
 import bottleOutdoorLogoImg from './assets/images/waterholic_outdoor_logo_bottle_1795462017951.jpg';
 import bottleColdLogoImg from './assets/images/waterholic_thermal_cold_logo_1795462070545.jpg';
 import bottleHotLogoImg from './assets/images/waterholic_thermal_hot_logo_1795462070671.jpg';
+import heroFlaskCutoutImg from './assets/images/waterholic_hero_flask_cutout.webp';
+import orderFlaskCutoutImg from './assets/images/waterholic_order_flask_cutout.webp';
+import bentoLidImg from './assets/images/waterholic_bento_lid.webp';
 import type {
   HydrationLog,
   HydrationMilestoneStats,
@@ -402,8 +406,18 @@ export default function App() {
   const [fastFlowSignal, setFastFlowSignal] = useState<number>(0);
   const [fastFlowSurging, setFastFlowSurging] = useState<boolean>(false);
   const fastFlowTimerRef = useRef<number | null>(null);
+  const [configuratorHovered, setConfiguratorHovered] = useState<boolean>(false);
+  const [configuratorFocused, setConfiguratorFocused] = useState<boolean>(false);
+  const [configuratorPulseOpen, setConfiguratorPulseOpen] = useState<boolean>(false);
+  const configuratorPulseTimerRef = useRef<number | null>(null);
   const [flagshipJustAdded, setFlagshipJustAdded] = useState<boolean>(false);
   const flagshipAddedTimerRef = useRef<number | null>(null);
+  const [autoOpenArMode, setAutoOpenArMode] = useState<
+    'desk' | 'camera' | 'qr' | null
+  >(null);
+  const [arInitialBoot, setArInitialBoot] = useState<boolean | undefined>(
+    undefined
+  );
 
   const {
     user,
@@ -1244,18 +1258,28 @@ export default function App() {
   const triggerFastFlowPulse = useCallback(() => {
     setFastFlowSignal((n) => n + 1);
     setFastFlowSurging(true);
+    setConfiguratorPulseOpen(true);
     if (fastFlowTimerRef.current !== null) {
       window.clearTimeout(fastFlowTimerRef.current);
     }
     fastFlowTimerRef.current = window.setTimeout(() => {
       setFastFlowSurging(false);
     }, 950);
+    if (configuratorPulseTimerRef.current !== null) {
+      window.clearTimeout(configuratorPulseTimerRef.current);
+    }
+    configuratorPulseTimerRef.current = window.setTimeout(() => {
+      setConfiguratorPulseOpen(false);
+    }, 4500);
   }, []);
 
   useEffect(() => {
     return () => {
       if (fastFlowTimerRef.current !== null) {
         window.clearTimeout(fastFlowTimerRef.current);
+      }
+      if (configuratorPulseTimerRef.current !== null) {
+        window.clearTimeout(configuratorPulseTimerRef.current);
       }
     };
   }, []);
@@ -1273,6 +1297,22 @@ export default function App() {
     setPrice(nextPrice);
     triggerFastFlowPulse();
   };
+
+  const handleResetBottleConfig = useCallback(() => {
+    selectedConfigRef.current = {
+      finish: 'blue',
+      size: '950 ml',
+      price: 48,
+    };
+    setFinish('blue');
+    setSize('950 ml');
+    setPrice(48);
+    setEngravingEnabled(true);
+    setEngravingText('ALEX');
+    setEngravingFont('serif');
+    setEngravingOrientation('vertical');
+    triggerFastFlowPulse();
+  }, [triggerFastFlowPulse]);
 
   const handleAddCatalogProduct = useCallback(
     (payload: AddToBagPayload) => {
@@ -1500,9 +1540,52 @@ export default function App() {
   }, []);
 
   // Automatically open direct product deep links (?product=<id>&finish=<finishId>)
+  // and mobile AR QR handoff links (?ar=1&finish=...&size=...&engraving=...&font=...&boot=...)
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
+
+    if (params.get('ar') === '1') {
+      const arFinish = params.get('finish');
+      const validFinishes: FinishId[] = [
+        'blue',
+        'pink',
+        'transparent',
+        'sage',
+        'basalt',
+        'glacier',
+      ];
+      if (arFinish && validFinishes.includes(arFinish as FinishId)) {
+        setFinish(arFinish as FinishId);
+      }
+      const arSize = params.get('size');
+      if (arSize === '750 ml' || arSize === '950 ml' || arSize === '1.2 L') {
+        setSize(arSize);
+        setPrice(arSize === '750 ml' ? 42 : arSize === '1.2 L' ? 54 : 48);
+      }
+      const arEngraving = params.get('engraving');
+      if (arEngraving !== null) {
+        const trimmed = arEngraving.trim().slice(0, 12);
+        setEngravingEnabled(trimmed.length > 0);
+        setEngravingText(trimmed);
+      }
+      const arFont = params.get('font');
+      if (arFont === 'sans' || arFont === 'serif' || arFont === 'mono') {
+        setEngravingFont(arFont);
+      }
+      const arBoot = params.get('boot');
+      if (arBoot === '0' || arBoot === '1') {
+        setArInitialBoot(arBoot === '1');
+      }
+      setAutoOpenArMode('camera');
+      window.setTimeout(() => {
+        document
+          .getElementById('studio-3d')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 280);
+      return;
+    }
+
     const sharedProductId = params.get('product');
     if (!sharedProductId) return;
     const matched = PRODUCTS.find((p) => p.id === sharedProductId);
@@ -2471,7 +2554,7 @@ export default function App() {
                 id="flask-tilt-wrap"
               >
                 <img
-                  src="https://www.gstatic.com/aistudio/starter-apps/flask-applet/flask-cutout.webp"
+                  src={heroFlaskCutoutImg}
                   alt="Waterholic Flask 950 ml with engraved Waterholic droplet logo and black chug lid"
                   className="flask-hero-img"
                   id="hero-flask-img"
@@ -2539,6 +2622,10 @@ export default function App() {
             recentlyViewed={recentlyViewedProducts}
             onQuickView={handleOpenQuickView}
             onAddToBag={handleAddCatalogProduct}
+            hydrationConsumedMl={hydration.consumedMl}
+            hydrationGoalMl={profile.dailyGoalMl}
+            onLogWater={handleLogWater}
+            onOpenHydrationDrawer={() => openProfileAt('overview')}
           />
         </div>
 
@@ -2568,9 +2655,29 @@ export default function App() {
           theme={theme}
           daypart={activeDaypart}
           activeFinish={finish}
+          activeSize={size}
+          engravingEnabled={engravingEnabled}
+          engravingText={engravingText}
+          engravingFont={engravingFont}
+          engravingOrientation={engravingOrientation}
+          consumedMl={hydration.consumedMl}
+          dailyGoalMl={profile.dailyGoalMl}
+          autoOpenArMode={autoOpenArMode}
+          initialShowBoot={arInitialBoot}
+          onConsumeAutoOpenAr={() => setAutoOpenArMode(null)}
           onSyncFinish={(nextFinish: StudioFinishKey) => selectFinish(nextFinish)}
+          onSyncSize={(nextSize, nextPrice) => selectSize(nextSize, nextPrice)}
+          onSyncEngraving={({ enabled, text }) => {
+            setEngravingEnabled(enabled);
+            setEngravingText(text);
+            triggerFastFlowPulse();
+          }}
+          onResetAllConfigs={handleResetBottleConfig}
           onAddConfiguredToBag={(cfg) => {
-            const key = `studio3d__${cfg.finish}__${cfg.sizeLabel}`;
+            const engSlug = cfg.engravingText
+              ? `__eng_${cfg.engravingText.toLowerCase()}`
+              : '';
+            const key = `studio3d__${cfg.finish}__${cfg.sizeLabel}${engSlug}`;
             const isPink = cfg.finish === 'pink';
             setBag((prev) => {
               const idx = prev.findIndex((item) => item.key === key);
@@ -2587,7 +2694,9 @@ export default function App() {
                   name: isPink
                     ? 'Waterholic 3D Custom Rose Quartz Flask'
                     : 'Waterholic 3D Studio Flagship Flask',
-                  finishName: cfg.finishName,
+                  finishName: cfg.engravingText
+                    ? `${cfg.finishName} · Engraved "${cfg.engravingText}"`
+                    : cfg.finishName,
                   finishId: cfg.finish,
                   finishHex: cfg.finishHex,
                   finishIsTransparent: cfg.isTransparent,
@@ -2885,7 +2994,7 @@ export default function App() {
             <div className="bento-grid" ref={bentoGridRef}>
               <article className="bento-tile bento-tall reveal-tile">
                 <img
-                  src="https://www.gstatic.com/aistudio/starter-apps/flask-applet/flask-bento-lid.webp"
+                  src={bentoLidImg}
                   alt="Close-up of threaded black chug cap and brushed steel neck"
                   className="bento-img"
                 />
@@ -2943,7 +3052,7 @@ export default function App() {
                 style={{ transform: `scale(${activeScale})` }}
               >
                 <img
-                  src="https://www.gstatic.com/aistudio/starter-apps/flask-applet/flask-order-cutout.webp"
+                  src={orderFlaskCutoutImg}
                   alt="Configured Waterholic Flask three-quarter preview with engraved logo"
                   className="order-flask-img"
                   id="order-flask-img"
@@ -2978,7 +3087,17 @@ export default function App() {
               </div>
             </div>
 
-            <div className="order-panel">
+            <div
+              className="order-panel"
+              onPointerEnter={() => setConfiguratorHovered(true)}
+              onPointerLeave={() => setConfiguratorHovered(false)}
+              onFocusCapture={() => setConfiguratorFocused(true)}
+              onBlurCapture={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                  setConfiguratorFocused(false);
+                }
+              }}
+            >
               <span className="launch-eyebrow">
                 Bespoke Atelier Configurator
               </span>
@@ -3218,20 +3337,105 @@ export default function App() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                className={`btn btn-primary btn-full magnetic-btn${flagshipJustAdded ? ' is-added' : ''}`}
-                id="add-to-bag-btn"
-                onClick={addFlagshipToBag}
-              >
-                <span className="btn-label" id="add-to-bag-label">
-                  {flagshipJustAdded
-                    ? 'Added to Bag ✓'
-                    : engravingEnabled && engravingText.trim()
-                      ? `Add Engraved Flask — $${price + (FINISH_META[finish].premiumDelta ?? 0)}`
-                      : `Add to Bag — $${price + (FINISH_META[finish].premiumDelta ?? 0)}`}
-                </span>
-              </button>
+              {(() => {
+                const selectedCapacityMl =
+                  size === '1.2 L' ? 1200 : size === '750 ml' ? 750 : 950;
+                const safeGoal = Math.max(250, profile.dailyGoalMl || 2500);
+                const dailyPct = Math.min(
+                  100,
+                  Math.max(
+                    0,
+                    Math.round((hydration.consumedMl / safeGoal) * 100)
+                  )
+                );
+                const projectedPct = Math.min(
+                  100,
+                  Math.round(
+                    ((hydration.consumedMl + selectedCapacityMl) / safeGoal) *
+                      100
+                  )
+                );
+                const showFloatBadge =
+                  configuratorHovered ||
+                  configuratorFocused ||
+                  configuratorPulseOpen;
+
+                return (
+                  <div className="order-cta-stack">
+                    <div
+                      className={`order-hydration-float${
+                        showFloatBadge ? ' is-visible' : ''
+                      }`}
+                      role="status"
+                      aria-live="polite"
+                    >
+                      <HydrationProgressRing
+                        consumedMl={hydration.consumedMl}
+                        dailyGoalMl={safeGoal}
+                        selectedCapacityMl={selectedCapacityMl}
+                        interactionSignal={fastFlowSignal}
+                        size={38}
+                        variant="surface"
+                        showTooltipTitle={false}
+                      />
+                      <div className="order-hydration-float-copy">
+                        <span className="order-hydration-float-title tabular-nums">
+                          Daily Hydration · {dailyPct}%
+                          <span className="order-hydration-float-sep" aria-hidden="true">
+                            ·
+                          </span>
+                          <span className="order-hydration-float-ml">
+                            {hydration.consumedMl.toLocaleString()} /{' '}
+                            {safeGoal.toLocaleString()} ml
+                          </span>
+                        </span>
+                        <span className="order-hydration-float-sub tabular-nums">
+                          {dailyPct >= 100
+                            ? 'Daily goal achieved — keep flowing'
+                            : `+1× ${size} refill brings you to ${projectedPct}%`}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="order-hydration-sip-btn tabular-nums"
+                        onClick={() => {
+                          handleLogWater('Quick Sip', 250);
+                          triggerFastFlowPulse();
+                        }}
+                      >
+                        +250 ml
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      className={`btn btn-primary btn-full magnetic-btn order-add-btn${
+                        flagshipJustAdded ? ' is-added' : ''
+                      }${showFloatBadge ? ' is-hydration-active' : ''}`}
+                      id="add-to-bag-btn"
+                      onClick={addFlagshipToBag}
+                    >
+                      <span className="btn-label" id="add-to-bag-label">
+                        {flagshipJustAdded
+                          ? 'Added to Bag ✓'
+                          : engravingEnabled && engravingText.trim()
+                            ? `Add Engraved Flask — $${price + (FINISH_META[finish].premiumDelta ?? 0)}`
+                            : `Add to Bag — $${price + (FINISH_META[finish].premiumDelta ?? 0)}`}
+                      </span>
+                      <span className="order-add-hydration-dial">
+                        <HydrationProgressRing
+                          consumedMl={hydration.consumedMl}
+                          dailyGoalMl={safeGoal}
+                          selectedCapacityMl={selectedCapacityMl}
+                          interactionSignal={fastFlowSignal}
+                          size={34}
+                          variant="on-primary"
+                        />
+                      </span>
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </section>

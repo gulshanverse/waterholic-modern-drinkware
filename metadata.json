@@ -1,6 +1,6 @@
 {
   "name": "Waterholic",
   "description": "Interactive product landing page for Waterholic featuring WebGL alpine contours, Three.js 3D Bottle Studio, Gemini AI Hydration Concierge with Live Voice, Search & Maps Grounding, Audio Transcription, AI Creative Lab, and Firebase Cloud Sync.",
-  "requestFramePermissions": ["microphone", "geolocation"],
+  "requestFramePermissions": ["microphone", "geolocation", "camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
