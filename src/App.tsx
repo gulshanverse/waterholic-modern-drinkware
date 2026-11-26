@@ -2536,14 +2536,15 @@ export default function App() {
       </nav>
 
       <main>
-        {/* SECTION 1: Asymmetric Split Hero */}
+        {/* SECTION 1: CSS Grid Split Hero */}
         <section id="hero" ref={heroSectionRef} className="hero">
-          <canvas
-            ref={heroCanvasRef}
-            id="hero-gl-canvas"
-            className="hero-canvas"
-            aria-hidden="true"
-          />
+          <div className="hero-canvas-layer" aria-hidden="true">
+            <canvas
+              ref={heroCanvasRef}
+              id="hero-gl-canvas"
+              className="hero-canvas"
+            />
+          </div>
 
           <div className="container hero-grid">
             <div className="hero-copy">
@@ -2626,23 +2627,29 @@ export default function App() {
             </div>
 
             <div className="hero-stage" ref={heroStageRef} id="hero-stage">
-              <div
-                className="flask-tilt-wrap"
-                ref={tiltWrapRef}
-                id="flask-tilt-wrap"
-              >
-                <img
-                  src={heroFlaskCutoutImg}
-                  alt="Waterholic Flask 950 ml with engraved Waterholic droplet logo and black chug lid"
-                  className="flask-hero-img"
-                  id="hero-flask-img"
-                  data-finish={finish}
-                  width={519}
-                  height={940}
+              <div className="hero-flask-pedestal">
+                <div
+                  className="flask-tilt-wrap"
+                  ref={tiltWrapRef}
+                  id="flask-tilt-wrap"
+                >
+                  <img
+                    src={heroFlaskCutoutImg}
+                    alt="Waterholic Flask 950 ml with engraved Waterholic droplet logo and black chug lid"
+                    className="flask-hero-img"
+                    id="hero-flask-img"
+                    data-finish={finish}
+                    width={519}
+                    height={940}
+                  />
+                  <BottleBrandMark finish={finish} variant="hero" />
+                </div>
+                <div
+                  className="flask-shadow"
+                  ref={shadowRef}
+                  aria-hidden="true"
                 />
-                <BottleBrandMark finish={finish} variant="hero" />
               </div>
-              <div className="flask-shadow" ref={shadowRef} aria-hidden="true" />
 
               <div
                 className="hero-swatches"

@@ -635,14 +635,27 @@ a {
   margin-top: 14px;
 }
 
-/* SECTION 1: Asymmetric Split Hero (min-h-[100dvh], pt-24 max) */
+/* SECTION 1: CSS Grid Split Hero (WebGL canvas + product content aligned in shared grid cell) */
 .hero {
   position: relative;
-  min-height: 100dvh;
-  padding-top: 84px;
-  padding-bottom: 40px;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   align-items: center;
+  min-height: clamp(540px, 72dvh, 660px);
+  padding: 0;
+  overflow: hidden;
+}
+
+.hero-canvas-layer {
+  grid-area: 1 / 1;
+  position: relative;
+  align-self: stretch;
+  justify-self: stretch;
+  min-width: 0;
+  min-height: 0;
+  z-index: 0;
+  pointer-events: none;
   overflow: hidden;
 }
 
@@ -651,37 +664,46 @@ a {
   inset: 0;
   width: 100%;
   height: 100%;
-  z-index: 0;
+  display: block;
   pointer-events: none;
 }
 
 .hero-grid {
+  grid-area: 1 / 1;
+  align-self: center;
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
   align-items: center;
-  gap: clamp(32px, 5vw, 72px);
+  gap: clamp(24px, 4vw, 64px);
+  padding-top: calc(64px + var(--announcement-h, 0px) + clamp(20px, 3vh, 36px));
+  padding-bottom: clamp(24px, 3.5vh, 40px);
 }
 
 .hero-copy {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  row-gap: 18px;
   max-width: 580px;
+  min-width: 0;
 }
 
 .hero-title {
   font-family: var(--font-display);
-  font-size: clamp(2.85rem, 5.2vw, 4.75rem);
+  font-size: clamp(2.65rem, 4.8vw, 4.4rem);
   font-weight: 600;
   letter-spacing: -0.03em;
   line-height: 1.06;
 }
 
 .hero-sub {
-  font-size: clamp(1.05rem, 1.3vw, 1.2rem);
+  font-size: clamp(1.02rem, 1.25vw, 1.18rem);
   font-weight: 400;
   color: var(--text-secondary);
-  line-height: 1.62;
-  margin-top: 20px;
+  line-height: 1.6;
+  margin-top: 0;
   max-width: 46ch;
 }
 
@@ -689,8 +711,8 @@ a {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 32px;
+  gap: 12px 14px;
+  margin-top: 8px;
 }
 
 .hero-primary-cluster {
@@ -763,11 +785,19 @@ a {
 
 .hero-stage {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  align-content: center;
+  row-gap: 16px;
+  min-width: 0;
   perspective: 1200px;
+}
+
+.hero-flask-pedestal {
+  display: grid;
+  justify-items: center;
+  align-items: end;
 }
 
 .flask-tilt-wrap {
@@ -784,7 +814,7 @@ a {
   position: relative;
   z-index: 1;
   width: auto;
-  height: min(60dvh, 520px);
+  height: clamp(320px, 50dvh, 450px);
   max-width: 100%;
   object-fit: contain;
   background: transparent;
@@ -860,10 +890,10 @@ a {
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 6px;
-  margin-top: 24px;
-  padding: 6px;
-  max-width: min(520px, 100%);
+  gap: 5px;
+  margin-top: 0;
+  padding: 5px;
+  max-width: min(500px, 100%);
   border-radius: 22px;
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
@@ -1834,7 +1864,7 @@ a {
 }
 
 .hero-meta-strip {
-  margin-top: 28px;
+  margin-top: 4px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -8982,25 +9012,27 @@ body {
   /* Hero Mobile Alignment */
   .hero {
     min-height: auto;
-    padding-top: 84px;
-    padding-bottom: 44px;
-    align-items: flex-start;
+    padding: 0;
+    align-items: start;
   }
 
   .hero-grid {
-    grid-template-columns: 1fr;
-    gap: 24px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    padding-top: calc(64px + var(--announcement-h, 0px) + 18px);
+    padding-bottom: 32px;
   }
 
   .hero-stage {
     order: 1;
     width: 100%;
-    padding-top: 4px;
+    row-gap: 14px;
   }
 
   .hero-copy {
     order: 2;
     max-width: 100%;
+    row-gap: 14px;
   }
 
   .hero-title {
@@ -9012,12 +9044,12 @@ body {
 
   .hero-sub {
     font-size: 15.5px;
-    margin-top: 14px;
+    margin-top: 0;
     max-width: 100%;
   }
 
   .hero-actions {
-    margin-top: 22px;
+    margin-top: 6px;
     gap: 10px;
   }
 
@@ -9029,7 +9061,7 @@ body {
   }
 
   .flask-hero-img {
-    height: min(44dvh, 330px);
+    height: min(42dvh, 320px);
   }
 
   .flask-shadow {
@@ -9039,7 +9071,7 @@ body {
 
   .hero-swatches {
     width: 100%;
-    margin-top: 18px;
+    margin-top: 0;
     padding: 6px;
     border-radius: 18px;
     gap: 6px;
