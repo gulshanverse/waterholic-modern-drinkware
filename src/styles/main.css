@@ -1644,8 +1644,8 @@ a {
 .site-footer {
   background: var(--surface);
   border-top: 1px solid var(--border);
-  padding-top: clamp(56px, 7vw, 84px);
-  padding-bottom: 32px;
+  padding-top: clamp(28px, 3vw, 36px);
+  padding-bottom: 18px;
   color: var(--text-secondary);
 }
 
@@ -3387,8 +3387,8 @@ a {
 .footer-grid {
   display: grid;
   grid-template-columns: minmax(270px, 1.55fr) repeat(4, minmax(0, 1fr));
-  gap: clamp(28px, 3.6vw, 48px);
-  padding-bottom: clamp(40px, 5vw, 56px);
+  gap: clamp(24px, 3vw, 40px);
+  padding-bottom: clamp(20px, 2.5vw, 26px);
   border-bottom: 1px solid var(--border);
   align-items: start;
 }
@@ -3396,7 +3396,7 @@ a {
 .footer-brand-col {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   max-width: 340px;
 }
 
@@ -3621,7 +3621,7 @@ a {
 .footer-col {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -3636,7 +3636,7 @@ a {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 6px;
 }
 
 .footer-link {
@@ -3664,8 +3664,8 @@ a {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 14px 24px;
-  padding-top: 24px;
+  gap: 12px 24px;
+  padding-top: 16px;
   font-size: 13px;
   color: var(--text-secondary);
 }
@@ -5438,7 +5438,8 @@ a {
 /* Support, Warranty, FAQ & Newsletter Section */
 .support-section {
   position: relative;
-  padding-block: clamp(72px, 9vw, 112px);
+  padding-top: clamp(64px, 8vw, 96px);
+  padding-bottom: clamp(44px, 5vw, 60px);
   background: var(--surface);
   border-top: 1px solid var(--border);
 }
@@ -10116,7 +10117,7 @@ body {
 
   /* Footer Mobile Breathing Room (Clear of FAB) */
   .site-footer {
-    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
   }
 }
 
