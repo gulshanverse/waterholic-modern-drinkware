@@ -19,6 +19,7 @@ import {
 import { BottleColorImage } from './BottleColorImage';
 import { CatalogGridSkeleton } from './ShimmerSkeletons';
 import { HydrationProgressRing } from './HydrationProgressRing';
+import { ArrowUpDown, ChevronDown } from 'lucide-react';
 import {
   triggerAddToBagHaptic,
   triggerMicroHapticTick,
@@ -149,6 +150,15 @@ type SortKey =
   | 'rating'
   | 'name';
 
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: 'featured', label: 'Featured' },
+  { value: 'popularity', label: 'Popularity' },
+  { value: 'price-asc', label: 'Price: Low to High' },
+  { value: 'price-desc', label: 'Price: High to Low' },
+  { value: 'rating', label: 'Highest Rated' },
+  { value: 'name', label: 'Name: A–Z' },
+];
+
 const SORT_LABELS: Record<SortKey, string> = {
   featured: 'Featured',
   popularity: 'Popularity',
@@ -157,6 +167,16 @@ const SORT_LABELS: Record<SortKey, string> = {
   rating: 'Highest Rated',
   name: 'Name: A–Z',
 };
+
+function getDisplayUnitPrice(product: Product): number {
+  const defaultSize =
+    product.sizes.find((s) => s.priceDelta === 0) ?? product.sizes[0];
+  return product.price + (defaultSize?.priceDelta ?? 0);
+}
+
+function getPopularityScore(product: Product): number {
+  return product.reviews * (product.rating / 5);
+}
 
 function ProductCard({
   product,
@@ -226,7 +246,7 @@ function ProductCard({
   const defaultSize =
     product.sizes.find((s) => s.priceDelta === 0) ?? product.sizes[0];
   const defaultSizeLabel = defaultSize?.label ?? product.capacity;
-  const unitPrice = product.price + (defaultSize?.priceDelta ?? 0);
+  const unitPrice = getDisplayUnitPrice(product);
   const catMeta = CATEGORY_MAP[product.category];
 
   const handleSelectFinish = (idx: number) => {
@@ -928,16 +948,25 @@ export function CatalogSection({
       case 'popularity':
         sorted.sort(
           (a, b) =>
+            getPopularityScore(b) - getPopularityScore(a) ||
             b.reviews - a.reviews ||
             b.rating - a.rating ||
-            a.price - b.price
+            getDisplayUnitPrice(a) - getDisplayUnitPrice(b)
         );
         break;
       case 'price-asc':
-        sorted.sort((a, b) => a.price - b.price || b.reviews - a.reviews);
+        sorted.sort(
+          (a, b) =>
+            getDisplayUnitPrice(a) - getDisplayUnitPrice(b) ||
+            getPopularityScore(b) - getPopularityScore(a)
+        );
         break;
       case 'price-desc':
-        sorted.sort((a, b) => b.price - a.price || b.reviews - a.reviews);
+        sorted.sort(
+          (a, b) =>
+            getDisplayUnitPrice(b) - getDisplayUnitPrice(a) ||
+            getPopularityScore(b) - getPopularityScore(a)
+        );
         break;
       case 'rating':
         sorted.sort((a, b) => b.rating - a.rating || b.reviews - a.reviews);
@@ -951,7 +980,7 @@ export function CatalogSection({
           const fa = a.featured ? 1 : 0;
           const fb = b.featured ? 1 : 0;
           if (fb !== fa) return fb - fa;
-          return b.reviews - a.reviews;
+          return getPopularityScore(b) - getPopularityScore(a);
         });
         break;
     }
@@ -1124,71 +1153,121 @@ export function CatalogSection({
           </div>
 
           <div className="catalog-controls-row">
-            <label className="filter-select-wrap">
+            <label className="filter-select-wrap" htmlFor="catalog-variety-select">
               <span className="filter-label">Variety</span>
-              <select
-                className="filter-select"
-                aria-label="Filter by variety"
-                value={selectedVariety}
-                onChange={(e) => setSelectedVariety(e.target.value)}
-              >
-                <option value="all">All Varieties</option>
-                {availableVarieties.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
-                  </option>
-                ))}
-              </select>
+              <span className="filter-select-shell">
+                <select
+                  id="catalog-variety-select"
+                  className="filter-select"
+                  aria-label="Filter by variety"
+                  value={selectedVariety}
+                  onChange={(e) => setSelectedVariety(e.target.value)}
+                >
+                  <option value="all">All Varieties</option>
+                  {availableVarieties.map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={15}
+                  strokeWidth={2}
+                  className="filter-select-chevron"
+                  aria-hidden="true"
+                />
+              </span>
             </label>
 
-            <label className="filter-select-wrap">
+            <label className="filter-select-wrap" htmlFor="catalog-material-select">
               <span className="filter-label">Material</span>
-              <select
-                className="filter-select"
-                aria-label="Filter by material"
-                value={selectedMaterial}
-                onChange={(e) => setSelectedMaterial(e.target.value)}
-              >
-                <option value="all">All Materials</option>
-                {MATERIALS_LIST.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
+              <span className="filter-select-shell">
+                <select
+                  id="catalog-material-select"
+                  className="filter-select"
+                  aria-label="Filter by material"
+                  value={selectedMaterial}
+                  onChange={(e) => setSelectedMaterial(e.target.value)}
+                >
+                  <option value="all">All Materials</option>
+                  {MATERIALS_LIST.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={15}
+                  strokeWidth={2}
+                  className="filter-select-chevron"
+                  aria-hidden="true"
+                />
+              </span>
             </label>
 
-            <label className="filter-select-wrap">
+            <label className="filter-select-wrap" htmlFor="catalog-price-select">
               <span className="filter-label">Price</span>
-              <select
-                className="filter-select"
-                aria-label="Filter by price range"
-                value={priceRange}
-                onChange={(e) => setPriceRange(e.target.value as PriceRange)}
-              >
-                <option value="all">Any Price</option>
-                <option value="under25">Under {formatPrice(25)}</option>
-                <option value="25to60">{formatPrice(25)} – {formatPrice(60)}</option>
-                <option value="60to120">{formatPrice(60)} – {formatPrice(120)}</option>
-                <option value="over120">{formatPrice(120)}+</option>
-              </select>
+              <span className="filter-select-shell">
+                <select
+                  id="catalog-price-select"
+                  className="filter-select"
+                  aria-label="Filter by price range"
+                  value={priceRange}
+                  onChange={(e) => setPriceRange(e.target.value as PriceRange)}
+                >
+                  <option value="all">Any Price</option>
+                  <option value="under25">Under {formatPrice(25)}</option>
+                  <option value="25to60">{formatPrice(25)} – {formatPrice(60)}</option>
+                  <option value="60to120">{formatPrice(60)} – {formatPrice(120)}</option>
+                  <option value="over120">{formatPrice(120)}+</option>
+                </select>
+                <ChevronDown
+                  size={15}
+                  strokeWidth={2}
+                  className="filter-select-chevron"
+                  aria-hidden="true"
+                />
+              </span>
             </label>
 
-            <label className="filter-select-wrap">
+            <label
+              className="filter-select-wrap filter-select-wrap--sort"
+              htmlFor="catalog-sort-select"
+            >
               <span className="filter-label">Sort by</span>
-              <select
-                className="filter-select"
-                aria-label="Sort products by popularity or price"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortKey)}
-              >
-                <option value="featured">Featured</option>
-                <option value="popularity">Popularity (Most Popular)</option>
-                <option value="price-asc">Price: Low to High</option>
-                <option value="price-desc">Price: High to Low</option>
-                <option value="rating">Highest Rated</option>
-                <option value="name">Name: A–Z</option>
-              </select>
+              <span className="filter-select-shell">
+                <ArrowUpDown
+                  size={14}
+                  strokeWidth={2}
+                  className="filter-select-icon-left"
+                  aria-hidden="true"
+                />
+                <select
+                  id="catalog-sort-select"
+                  data-testid="catalog-sort-select"
+                  className={`filter-select filter-select--with-icon${
+                    sortBy !== 'featured' ? ' is-active-sort' : ''
+                  }`}
+                  aria-label="Sort products by price or popularity"
+                  value={sortBy}
+                  onChange={(e) => {
+                    triggerMicroHapticTick();
+                    setSortBy(e.target.value as SortKey);
+                  }}
+                >
+                  {SORT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={15}
+                  strokeWidth={2}
+                  className="filter-select-chevron"
+                  aria-hidden="true"
+                />
+              </span>
             </label>
 
             <button

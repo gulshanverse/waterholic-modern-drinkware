@@ -2051,22 +2051,68 @@ a {
   color: var(--text-secondary);
 }
 
+.filter-select-shell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
 .filter-select {
   width: 100%;
   height: 40px;
-  padding: 0 12px;
+  padding: 0 34px 0 12px;
   border-radius: 9px;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text-primary);
   font-family: var(--font-sans);
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  text-overflow: ellipsis;
+  transition: border-color 160ms var(--ease-out),
+    background-color 160ms var(--ease-out),
+    box-shadow 160ms var(--ease-out);
+}
+
+.filter-select--with-icon {
+  padding-left: 34px;
+}
+
+.filter-select:hover {
+  border-color: var(--border-strong);
 }
 
 .filter-select:focus {
   outline: none;
   border-color: var(--accent);
+}
+
+.filter-select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.filter-select.is-active-sort {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg));
+}
+
+.filter-select-icon-left {
+  position: absolute;
+  left: 11px;
+  color: var(--accent);
+  pointer-events: none;
+}
+
+.filter-select-chevron {
+  position: absolute;
+  right: 11px;
+  color: var(--text-secondary);
+  pointer-events: none;
 }
 
 .saved-filter-btn {
