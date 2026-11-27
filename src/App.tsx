@@ -2796,7 +2796,9 @@ export default function App() {
                 },
               ];
             });
-            setDrawerOpen(true);
+            if (cfg.openDrawer !== false) {
+              setDrawerOpen(true);
+            }
             showToast(
               `Added 3D Studio ${cfg.finishName} (${cfg.sizeLabel}) to bag`
             );

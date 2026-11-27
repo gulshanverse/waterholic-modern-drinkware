@@ -7,6 +7,7 @@ import gsap from 'gsap';
 import {
   Box,
   Camera,
+  Check,
   ChevronDown,
   ChevronUp,
   ImagePlus,
@@ -30,6 +31,7 @@ import { HydrationProgressRing } from './HydrationProgressRing';
 import { ARDeskPreviewModal, type ArPreviewMode } from './ARDeskPreviewModal';
 import {
   triggerAddToBagHaptic,
+  triggerFlyToBagAnimation,
   triggerMicroHapticTick,
 } from '../utils/hapticFeedback';
 import {
@@ -280,6 +282,7 @@ interface BottleStudio3DProps {
     sizeLabel: StudioSizeKey;
     price: number;
     engravingText?: string;
+    openDrawer?: boolean;
   }) => void;
   onSnapshotSaved?: (msg: string) => void;
   consumedMl?: number;
@@ -476,8 +479,10 @@ export function BottleStudio3D({
 
   const [interactSignal, setInteractSignal] = useState<number>(0);
   const [studioInteracting, setStudioInteracting] = useState<boolean>(false);
+  const [quickAdded, setQuickAdded] = useState<boolean>(false);
   const interactTimerRef = useRef<number | null>(null);
   const resetTimerRef = useRef<number | null>(null);
+  const quickAddTimerRef = useRef<number | null>(null);
 
   // Detect WebXR immersive-ar support safely on mount
   useEffect(() => {
@@ -599,6 +604,9 @@ export function BottleStudio3D({
       }
       if (resetTimerRef.current !== null) {
         window.clearTimeout(resetTimerRef.current);
+      }
+      if (quickAddTimerRef.current !== null) {
+        window.clearTimeout(quickAddTimerRef.current);
       }
     };
   }, []);
@@ -2885,11 +2893,74 @@ export function BottleStudio3D({
             </div>
           )}
 
-          {/* Compact collapsible bottom control dock (solid surface, zero backdrop-filter) */}
+          {/* Floating Quick Add to Bag FAB + Collapsible Bottom Customizer Dock */}
           {arOverlayMode === 'none' && (
-            <div
-              className={`studio3d-dock${dockCollapsed ? ' is-collapsed' : ''}`}
-            >
+            <div className="studio3d-bottom-stack">
+              <button
+                type="button"
+                className={`studio3d-quick-fab${quickAdded ? ' is-added' : ''}`}
+                data-testid="studio3d-quick-add-fab"
+                aria-label={`Quick add ${currentSpec.label} ${studioSize}${
+                  studioEngraving.trim()
+                    ? ` engraved ${studioEngraving.trim()}`
+                    : ''
+                } to bag for ${formatPrice(computedPrice)}`}
+                title={`Quick add ${currentSpec.label} (${studioSize})${
+                  studioEngraving.trim()
+                    ? ` · "${studioEngraving.trim()}"`
+                    : ''
+                } directly to bag`}
+                onClick={(e) => {
+                  triggerAddToBagHaptic(e.currentTarget);
+                  triggerFlyToBagAnimation(e.currentTarget);
+                  pulseStudioInteract();
+                  onAddConfiguredToBag({
+                    finish: studioFinish,
+                    finishName: currentSpec.label,
+                    finishHex: currentSpec.hex,
+                    isTransparent: currentSpec.isGlass,
+                    sizeLabel: studioSize,
+                    price: computedPrice,
+                    engravingText: studioEngraving.trim() || undefined,
+                    openDrawer: false,
+                  });
+                  setQuickAdded(true);
+                  if (quickAddTimerRef.current !== null) {
+                    window.clearTimeout(quickAddTimerRef.current);
+                  }
+                  quickAddTimerRef.current = window.setTimeout(() => {
+                    setQuickAdded(false);
+                  }, 1800);
+                }}
+              >
+                <span
+                  className={`studio3d-quick-fab-swatch${
+                    currentSpec.isGlass ? ' swatch-transparent' : ''
+                  }`}
+                  style={
+                    currentSpec.isGlass
+                      ? undefined
+                      : { background: currentSpec.hex }
+                  }
+                  aria-hidden="true"
+                />
+                <span className="studio3d-quick-fab-icon" aria-hidden="true">
+                  {quickAdded ? <Check size={16} /> : <ShoppingBag size={16} />}
+                </span>
+                <span className="studio3d-quick-fab-copy">
+                  <span className="studio3d-quick-fab-label">
+                    {quickAdded ? 'Added to Bag' : 'Quick Add to Bag'}
+                  </span>
+                  <span className="studio3d-quick-fab-meta tabular-nums">
+                    {currentSpec.label} · {studioSize} ·{' '}
+                    {formatPrice(computedPrice)}
+                  </span>
+                </span>
+              </button>
+
+              <div
+                className={`studio3d-dock${dockCollapsed ? ' is-collapsed' : ''}`}
+              >
             <button
               type="button"
               className="studio3d-dock-toggle"
@@ -3047,7 +3118,8 @@ export function BottleStudio3D({
                 </div>
               </div>
             )}
-          </div>
+              </div>
+            </div>
           )}
         </div>
       </div>

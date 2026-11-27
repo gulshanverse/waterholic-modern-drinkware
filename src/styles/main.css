@@ -6539,11 +6539,114 @@ a {
   color: var(--accent-text);
 }
 
-.studio3d-dock {
+.studio3d-bottom-stack {
   position: absolute;
   left: 16px;
   right: 16px;
   bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.studio3d-quick-fab {
+  pointer-events: auto;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px 9px 11px;
+  border-radius: var(--radius-pill);
+  border: 1px solid color-mix(in srgb, var(--accent) 72%, #ffffff 28%);
+  background: var(--accent);
+  color: var(--accent-text);
+  box-shadow:
+    0 12px 28px color-mix(in srgb, var(--accent) 32%, rgba(6, 19, 31, 0.28)),
+    0 2px 6px rgba(6, 19, 31, 0.16);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    transform 180ms var(--ease-out),
+    background-color 180ms var(--ease-out),
+    border-color 180ms var(--ease-out),
+    box-shadow 180ms var(--ease-out);
+}
+
+.studio3d-quick-fab:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 16px 34px color-mix(in srgb, var(--accent) 40%, rgba(6, 19, 31, 0.32)),
+    0 4px 10px rgba(6, 19, 31, 0.18);
+}
+
+.studio3d-quick-fab:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.studio3d-quick-fab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.studio3d-quick-fab.is-added {
+  background: #059669;
+  border-color: rgba(255, 255, 255, 0.34);
+  color: #ffffff;
+  box-shadow:
+    0 12px 28px rgba(5, 150, 105, 0.34),
+    0 2px 6px rgba(6, 19, 31, 0.18);
+}
+
+.studio3d-quick-fab-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 1px 3px rgba(6, 19, 31, 0.25);
+  flex-shrink: 0;
+}
+
+.studio3d-quick-fab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  flex-shrink: 0;
+}
+
+.studio3d-quick-fab-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.15;
+}
+
+.studio3d-quick-fab-label {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+}
+
+.studio3d-quick-fab-meta {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.88;
+  white-space: nowrap;
+}
+
+.studio3d-dock {
+  pointer-events: auto;
+  position: relative;
+  width: 100%;
   background: var(--bg);
   border: 1px solid var(--border-strong);
   border-radius: 14px;
@@ -6552,7 +6655,6 @@ a {
 }
 
 .studio3d-dock.is-collapsed {
-  left: auto;
   width: auto;
 }
 
@@ -9561,6 +9663,32 @@ body {
     min-height: 48px;
     padding: 8px 14px;
     font-size: 12.5px;
+  }
+
+  .studio3d-bottom-stack {
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    width: 100%;
+    align-items: stretch;
+    gap: 0;
+    pointer-events: auto;
+  }
+
+  .studio3d-quick-fab {
+    position: absolute;
+    top: 298px;
+    right: 12px;
+    z-index: 6;
+    min-height: 48px;
+    padding: 8px 14px 8px 10px;
+    gap: 8px;
+    max-width: calc(100% - 24px);
+  }
+
+  .studio3d-quick-fab-meta {
+    display: none;
   }
 
   .studio3d-dock,
