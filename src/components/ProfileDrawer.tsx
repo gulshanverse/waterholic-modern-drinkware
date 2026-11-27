@@ -30,7 +30,10 @@ import {
   type CountryCode,
 } from '../utils/currency';
 import { Cloud, Gift, Globe, LogIn, LogOut } from 'lucide-react';
-import { triggerAddToBagHaptic } from '../utils/hapticFeedback';
+import {
+  triggerAddToBagHaptic,
+  triggerHeartBurstAnimation,
+} from '../utils/hapticFeedback';
 
 export type ProfileTab = 'overview' | 'orders' | 'addresses' | 'wishlist';
 
@@ -915,7 +918,10 @@ export function ProfileDrawer({
                           <button
                             type="button"
                             className="bag-remove-btn"
-                            onClick={() => onToggleSave(product.id)}
+                            onClick={(e) => {
+                              triggerHeartBurstAnimation(e.currentTarget, false);
+                              onToggleSave(product.id);
+                            }}
                           >
                             Remove
                           </button>

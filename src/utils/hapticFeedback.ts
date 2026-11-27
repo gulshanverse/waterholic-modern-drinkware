@@ -282,4 +282,236 @@ export function triggerFlyToBagAnimation(originEl: HTMLElement | null | undefine
     });
 }
 
+const HEART_SVG_PATH =
+  'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
+
+const HEART_BURST_PALETTE_LIGHT = ['#e11d48', '#f43f5e', '#fb7185', '#fda4af'];
+const HEART_BURST_PALETTE_DARK = ['#fb7185', '#fda4af', '#f43f5e', '#fecdd3'];
+
+/**
+ * Triggers a subtle compositor-only ('transform', 'opacity') radial heart-burst
+ * particle animation anchored to the toggled wishlist button.
+ *
+ * - On save (nextSaved === true): renders a soft expanding rose halo ring,
+ *   4 tiny SVG hearts, and 4 micro sparkle dots radiating outward from the
+ *   button center, plus a subtle elastic icon pop on the trigger's heart SVG.
+ * - On unsave (nextSaved === false): renders a restrained 4-dot soft release
+ *   so toggling off feels acknowledged without competing with saving.
+ *
+ * Automatically skips all motion when prefers-reduced-motion is enabled and
+ * cleans up spawned DOM elements upon completion.
+ */
+export function triggerHeartBurstAnimation(
+  originEl: HTMLElement | null | undefined,
+  nextSaved: boolean
+) {
+  if (typeof window === 'undefined') return;
+
+  // Optional subtle hardware vibration on supported mobile devices
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      navigator.vibrate(nextSaved ? [8, 18, 6] : 5);
+    }
+  } catch {
+    // Ignore unsupported or restricted vibration APIs
+  }
+
+  const reducedMotion = window.matchMedia(
+    '(prefers-reduced-motion: reduce)'
+  ).matches;
+  if (reducedMotion || !originEl) return;
+
+  const rect = originEl.getBoundingClientRect();
+  if (!rect.width && !rect.height) return;
+
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+
+  const isDark =
+    document.documentElement.getAttribute('data-theme') === 'dark';
+  const palette = isDark ? HEART_BURST_PALETTE_DARK : HEART_BURST_PALETTE_LIGHT;
+
+  // Subtle tactile pop on the button's heart icon if present (for buttons not using Framer keyframe pop)
+  if (!originEl.classList.contains('wishlist-btn')) {
+    const iconSvg = originEl.querySelector('svg');
+    if (iconSvg) {
+      gsap.killTweensOf(iconSvg, 'scale');
+      gsap
+        .timeline({
+          onComplete: () => {
+            gsap.set(iconSvg, { clearProps: 'transform' });
+          },
+        })
+        .to(iconSvg, {
+          scale: nextSaved ? 1.28 : 0.86,
+          duration: 0.14,
+          ease: 'power2.out',
+        })
+        .to(iconSvg, {
+          scale: 1,
+          duration: 0.26,
+          ease: nextSaved ? 'back.out(2.6)' : 'power2.out',
+        });
+    }
+  }
+
+  const layer = document.createElement('span');
+  layer.className = 'heart-burst-layer';
+  layer.setAttribute('aria-hidden', 'true');
+  layer.style.left = `${cx}px`;
+  layer.style.top = `${cy}px`;
+  document.body.appendChild(layer);
+
+  const tl = gsap.timeline({
+    onComplete: () => {
+      layer.remove();
+    },
+  });
+
+  if (nextSaved) {
+    // Soft expanding rose ring
+    const ring = document.createElement('span');
+    ring.className = 'heart-burst-ring';
+    layer.appendChild(ring);
+
+    tl.fromTo(
+      ring,
+      { scale: 0.45, opacity: 0.65 },
+      {
+        scale: 2.1,
+        opacity: 0,
+        duration: 0.46,
+        ease: 'power2.out',
+      },
+      0
+    );
+
+    const totalParticles = 8;
+    const baseOffset = -Math.PI / 2 + (Math.random() - 0.5) * 0.35;
+
+    for (let i = 0; i < totalParticles; i++) {
+      const isHeart = i % 2 === 0;
+      const angle =
+        baseOffset +
+        (i / totalParticles) * Math.PI * 2 +
+        (Math.random() - 0.5) * 0.28;
+      const distance = isHeart
+        ? 23 + Math.random() * 14
+        : 18 + Math.random() * 12;
+      const targetX = Math.cos(angle) * distance;
+      const targetY = Math.sin(angle) * distance - (isHeart ? 5 : 2);
+      const color = palette[i % palette.length];
+      const delay = isHeart ? 0.015 * (i % 3) : 0.03 + 0.015 * (i % 3);
+      const duration = isHeart
+        ? 0.48 + Math.random() * 0.1
+        : 0.38 + Math.random() * 0.08;
+
+      if (isHeart) {
+        const size = 8 + Math.round(Math.random() * 3);
+        const svgNS = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(svgNS, 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('width', String(size));
+        svg.setAttribute('height', String(size));
+        svg.setAttribute('class', 'heart-burst-heart');
+        svg.style.color = color;
+
+        const path = document.createElementNS(svgNS, 'path');
+        path.setAttribute('d', HEART_SVG_PATH);
+        path.setAttribute('fill', 'currentColor');
+        svg.appendChild(path);
+        layer.appendChild(svg);
+
+        const rotation = (Math.random() - 0.5) * 42;
+        tl.fromTo(
+          svg,
+          { x: 0, y: 0, scale: 0.3, rotation: 0, opacity: 0.95 },
+          {
+            x: targetX,
+            y: targetY,
+            scale: 1.05,
+            rotation,
+            opacity: 0.92,
+            duration: duration * 0.45,
+            ease: 'power3.out',
+          },
+          delay
+        ).to(
+          svg,
+          {
+            x: targetX * 1.14,
+            y: targetY * 1.14 - 4,
+            scale: 0.2,
+            opacity: 0,
+            duration: duration * 0.55,
+            ease: 'power2.in',
+          },
+          delay + duration * 0.45
+        );
+      } else {
+        const dot = document.createElement('span');
+        dot.className = 'heart-burst-dot';
+        const dotSize = 3.5 + Math.random() * 1.8;
+        dot.style.width = `${dotSize}px`;
+        dot.style.height = `${dotSize}px`;
+        dot.style.backgroundColor = color;
+        layer.appendChild(dot);
+
+        tl.fromTo(
+          dot,
+          { x: 0, y: 0, scale: 0.45, opacity: 0.85 },
+          {
+            x: targetX,
+            y: targetY,
+            scale: 1,
+            opacity: 0.85,
+            duration: duration * 0.42,
+            ease: 'power3.out',
+          },
+          delay
+        ).to(
+          dot,
+          {
+            x: targetX * 1.12,
+            y: targetY * 1.12,
+            scale: 0,
+            opacity: 0,
+            duration: duration * 0.58,
+            ease: 'power2.in',
+          },
+          delay + duration * 0.42
+        );
+      }
+    }
+  } else {
+    // Subtle muted dissipation when removing from wishlist
+    const dotCount = 4;
+    const baseAngle = Math.PI / 4 + (Math.random() - 0.5) * 0.35;
+    for (let i = 0; i < dotCount; i++) {
+      const angle = baseAngle + (i / dotCount) * Math.PI * 2;
+      const distance = 13 + Math.random() * 6;
+      const dot = document.createElement('span');
+      dot.className = 'heart-burst-dot is-muted';
+      dot.style.width = '3.5px';
+      dot.style.height = '3.5px';
+      layer.appendChild(dot);
+
+      tl.fromTo(
+        dot,
+        { x: 0, y: 0, scale: 0.8, opacity: 0.48 },
+        {
+          x: Math.cos(angle) * distance,
+          y: Math.sin(angle) * distance,
+          scale: 0.15,
+          opacity: 0,
+          duration: 0.3,
+          ease: 'power2.out',
+        },
+        0
+      );
+    }
+  }
+}
+
+
 

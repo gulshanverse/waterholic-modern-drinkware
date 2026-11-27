@@ -76,7 +76,10 @@ import {
   X,
 } from 'lucide-react';
 import { AtmosphericSoundscapeEngine } from './utils/atmosphericSoundscape';
-import { triggerAddToBagHaptic } from './utils/hapticFeedback';
+import {
+  triggerAddToBagHaptic,
+  triggerHeartBurstAnimation,
+} from './utils/hapticFeedback';
 import bottleStudioLogoImg from './assets/images/waterholic_studio_logo_bottle_1795462018573.jpg';
 import bottleRiverLogoImg from './assets/images/waterholic_river_logo_bottle_1795462051322.jpg';
 import bottleOutdoorLogoImg from './assets/images/waterholic_outdoor_logo_bottle_1795462017951.jpg';
@@ -1866,8 +1869,9 @@ export default function App() {
       : 'Waterholic Flagship Flask';
   const isHeroFlagshipSaved = savedIds.has(heroFlagshipId);
 
-  const handleToggleHeroWishlist = () => {
+  const handleToggleHeroWishlist = (originEl?: HTMLElement | null) => {
     const nextSaved = !isHeroFlagshipSaved;
+    triggerHeartBurstAnimation(originEl, nextSaved);
     toggleSaveProduct(heroFlagshipId);
     showToast(
       nextSaved
@@ -2578,7 +2582,7 @@ export default function App() {
                         : `Bookmark ${heroFlagshipName}`
                     }
                     data-testid="hero-wishlist-btn"
-                    onClick={handleToggleHeroWishlist}
+                    onClick={(e) => handleToggleHeroWishlist(e.currentTarget)}
                   >
                     <Heart
                       size={20}

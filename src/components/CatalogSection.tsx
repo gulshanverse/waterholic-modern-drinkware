@@ -23,6 +23,7 @@ import { ArrowUpDown, Check, ChevronDown, Plus } from 'lucide-react';
 import {
   triggerAddToBagHaptic,
   triggerFlyToBagAnimation,
+  triggerHeartBurstAnimation,
   triggerMicroHapticTick,
   triggerSwipeUpAddHaptic,
 } from '../utils/hapticFeedback';
@@ -678,7 +679,10 @@ function ProductCard({
           className={`wishlist-btn${isSaved ? ' is-saved' : ''}`}
           aria-label={isSaved ? `Remove ${product.name} from saved` : `Save ${product.name}`}
           aria-pressed={isSaved}
-          onClick={() => onToggleSave(product.id)}
+          onClick={(e) => {
+            triggerHeartBurstAnimation(e.currentTarget, !isSaved);
+            onToggleSave(product.id);
+          }}
           whileHover={{ scale: 1.1, y: -1 }}
           whileTap={{ scale: 0.84 }}
           transition={CONTROL_SPRING}

@@ -13,7 +13,10 @@ import type { ProductReview } from '../types/profile';
 import type { AddToBagPayload } from './CatalogSection';
 import { BottleColorImage } from './BottleColorImage';
 import { ProductModalSkeleton } from './ShimmerSkeletons';
-import { triggerAddToBagHaptic } from '../utils/hapticFeedback';
+import {
+  triggerAddToBagHaptic,
+  triggerHeartBurstAnimation,
+} from '../utils/hapticFeedback';
 import { getRecommendedProducts } from '../utils/productRecommendations';
 import { useCurrency } from '../contexts/CurrencyContext';
 
@@ -637,7 +640,10 @@ export function ProductModal({
               <button
                 type="button"
                 className={`btn btn-ghost modal-save-btn${isSaved ? ' is-saved' : ''}`}
-                onClick={() => onToggleSave(product.id)}
+                onClick={(e) => {
+                  triggerHeartBurstAnimation(e.currentTarget, !isSaved);
+                  onToggleSave(product.id);
+                }}
                 aria-pressed={isSaved}
               >
                 <Heart

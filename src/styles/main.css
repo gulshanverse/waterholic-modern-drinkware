@@ -14292,6 +14292,65 @@ h4 {
   opacity: 0.78;
 }
 
+/* Subtle Wishlist Heart-Burst Particle Effect */
+.heart-burst-layer {
+  position: fixed;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 9999;
+  contain: layout style;
+}
+
+.heart-burst-ring {
+  position: absolute;
+  top: -12px;
+  left: -12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid #e11d48;
+  box-shadow: 0 0 0 1px rgba(244, 63, 94, 0.16);
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+:root[data-theme='dark'] .heart-burst-ring {
+  border-color: #fb7185;
+  box-shadow: 0 0 0 1px rgba(251, 113, 133, 0.22);
+}
+
+.heart-burst-heart {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin-top: -5px;
+  margin-left: -5px;
+  overflow: visible;
+  pointer-events: none;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 1px 3px rgba(225, 29, 72, 0.22));
+}
+
+:root[data-theme='dark'] .heart-burst-heart {
+  filter: drop-shadow(0 1px 4px rgba(251, 113, 133, 0.3));
+}
+
+.heart-burst-dot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin-top: -2px;
+  margin-left: -2px;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.heart-burst-dot.is-muted {
+  background: var(--text-secondary);
+}
+
 /* Reduced Motion Respect (taste-skill Section 6.B & emil-design-eng) */
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -14307,7 +14366,8 @@ h4 {
   }
 
   .skel-block::after,
-  .ambient-cursor-glow {
+  .ambient-cursor-glow,
+  .heart-burst-layer {
     display: none;
   }
 
