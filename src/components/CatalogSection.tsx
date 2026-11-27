@@ -19,9 +19,10 @@ import {
 import { BottleColorImage } from './BottleColorImage';
 import { CatalogGridSkeleton } from './ShimmerSkeletons';
 import { HydrationProgressRing } from './HydrationProgressRing';
-import { ArrowUpDown, ChevronDown } from 'lucide-react';
+import { ArrowUpDown, Check, ChevronDown, Plus } from 'lucide-react';
 import {
   triggerAddToBagHaptic,
+  triggerFlyToBagAnimation,
   triggerMicroHapticTick,
   triggerSwipeUpAddHaptic,
 } from '../utils/hapticFeedback';
@@ -141,7 +142,7 @@ interface CatalogSectionProps {
   onOpenHydrationDrawer?: () => void;
 }
 
-type PriceRange = 'all' | 'under25' | '25to60' | '60to120' | 'over120';
+type PriceRange = 'all' | 'under8' | '8to14' | '14to24' | 'over24';
 type SortKey =
   | 'featured'
   | 'popularity'
@@ -168,10 +169,17 @@ const SORT_LABELS: Record<SortKey, string> = {
   name: 'Name: A–Z',
 };
 
+function getMostPopularSize(product: Product) {
+  return (
+    product.sizes.find((s) => s.priceDelta === 0) ??
+    product.sizes[Math.floor(product.sizes.length / 2)] ??
+    product.sizes[0]
+  );
+}
+
 function getDisplayUnitPrice(product: Product): number {
-  const defaultSize =
-    product.sizes.find((s) => s.priceDelta === 0) ?? product.sizes[0];
-  return product.price + (defaultSize?.priceDelta ?? 0);
+  const popularSize = getMostPopularSize(product);
+  return product.price + (popularSize?.priceDelta ?? 0);
 }
 
 function getPopularityScore(product: Product): number {
@@ -201,11 +209,13 @@ function ProductCard({
   const [selectedFinishIdx, setSelectedFinishIdx] = useState(0);
   const [imgError, setImgError] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  const [plusJustAdded, setPlusJustAdded] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [swipeArmed, setSwipeArmed] = useState(false);
   const [swipeJustAdded, setSwipeJustAdded] = useState(false);
 
   const addedTimerRef = useRef<number | null>(null);
+  const plusAddedTimerRef = useRef<number | null>(null);
   const swipeAddedTimerRef = useRef<number | null>(null);
   const mediaRef = useRef<HTMLDivElement | null>(null);
   const bottleLiftRef = useRef<HTMLDivElement | null>(null);
@@ -235,6 +245,9 @@ function ProductCard({
       if (addedTimerRef.current !== null) {
         window.clearTimeout(addedTimerRef.current);
       }
+      if (plusAddedTimerRef.current !== null) {
+        window.clearTimeout(plusAddedTimerRef.current);
+      }
       if (swipeAddedTimerRef.current !== null) {
         window.clearTimeout(swipeAddedTimerRef.current);
       }
@@ -243,9 +256,8 @@ function ProductCard({
 
   const defaultFinish = product.finishes[0];
   const activeFinish = product.finishes[selectedFinishIdx] ?? defaultFinish;
-  const defaultSize =
-    product.sizes.find((s) => s.priceDelta === 0) ?? product.sizes[0];
-  const defaultSizeLabel = defaultSize?.label ?? product.capacity;
+  const popularSize = getMostPopularSize(product);
+  const defaultSizeLabel = popularSize?.label ?? product.capacity;
   const unitPrice = getDisplayUnitPrice(product);
   const catMeta = CATEGORY_MAP[product.category];
 
@@ -284,6 +296,39 @@ function ProductCard({
       qty: 1,
     });
     markButtonAdded();
+  };
+
+  const handlePlusQuickAdd = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    const btnEl = e.currentTarget;
+    triggerAddToBagHaptic(btnEl);
+    triggerFlyToBagAnimation(btnEl);
+    void bottlePulseControls.start({
+      y: [0, -10, 0],
+      scale: [1, 1.045, 1],
+      transition: {
+        type: 'spring',
+        stiffness: 420,
+        damping: 20,
+        mass: 0.68,
+      },
+    });
+    onAddToBag({
+      product,
+      finish: activeFinish,
+      sizeLabel: defaultSizeLabel,
+      unitPrice,
+      qty: 1,
+    });
+    markButtonAdded();
+    setPlusJustAdded(true);
+    if (plusAddedTimerRef.current !== null) {
+      window.clearTimeout(plusAddedTimerRef.current);
+    }
+    plusAddedTimerRef.current = window.setTimeout(() => {
+      setPlusJustAdded(false);
+      plusAddedTimerRef.current = null;
+    }, 1250);
   };
 
   const commitSwipeUpAdd = () => {
@@ -654,6 +699,68 @@ function ProductCard({
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
           </motion.svg>
         </motion.button>
+
+        <div className="quick-add-plus-anchor">
+          <AnimatePresence>
+            {plusJustAdded && (
+              <motion.span
+                key="plus-burst"
+                className="quick-add-burst"
+                role="status"
+                aria-live="polite"
+                initial={{ opacity: 0, y: 8, scale: 0.88 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.92 }}
+                transition={{
+                  type: 'spring',
+                  stiffness: 440,
+                  damping: 26,
+                  mass: 0.65,
+                }}
+              >
+                Added · {defaultSizeLabel}
+              </motion.span>
+            )}
+          </AnimatePresence>
+
+          <motion.button
+            type="button"
+            className={`quick-add-plus-btn${plusJustAdded ? ' is-added' : ''}`}
+            data-testid={`quick-add-plus-${product.id}`}
+            aria-label={`Quick add ${product.name} (${defaultSizeLabel}, most popular size) to bag`}
+            title={`Quick add ${defaultSizeLabel} (most popular) to bag`}
+            onClick={handlePlusQuickAdd}
+            whileHover={{ scale: 1.08, y: -1 }}
+            whileTap={{ scale: 0.88 }}
+            transition={CONTROL_SPRING}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              {plusJustAdded ? (
+                <motion.span
+                  key="check-icon"
+                  className="quick-add-plus-icon"
+                  initial={{ scale: 0.45, rotate: -45, opacity: 0 }}
+                  animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                  exit={{ scale: 0.5, rotate: 45, opacity: 0 }}
+                  transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <Check size={17} strokeWidth={2.5} aria-hidden="true" />
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="plus-icon"
+                  className="quick-add-plus-icon"
+                  initial={{ scale: 0.55, rotate: -90, opacity: 0 }}
+                  animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                  exit={{ scale: 0.55, rotate: 90, opacity: 0 }}
+                  transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <Plus size={18} strokeWidth={2.25} aria-hidden="true" />
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
+        </div>
       </div>
 
       <div className="product-card-body">
@@ -928,10 +1035,10 @@ export function CatalogSection({
       if (selectedMaterial !== 'all' && p.material !== selectedMaterial) {
         return false;
       }
-      if (priceRange === 'under25' && p.price >= 25) return false;
-      if (priceRange === '25to60' && (p.price < 25 || p.price > 60)) return false;
-      if (priceRange === '60to120' && (p.price < 60 || p.price > 120)) return false;
-      if (priceRange === 'over120' && p.price <= 120) return false;
+      if (priceRange === 'under8' && p.price >= 8) return false;
+      if (priceRange === '8to14' && (p.price < 8 || p.price > 14)) return false;
+      if (priceRange === '14to24' && (p.price < 14 || p.price > 24)) return false;
+      if (priceRange === 'over24' && p.price <= 24) return false;
 
       if (q) {
         const catName = CATEGORY_MAP[p.category].name.toLowerCase();
@@ -1063,7 +1170,7 @@ export function CatalogSection({
             <span aria-hidden="true">·</span>
             <span>{CATEGORIES.length} Categories</span>
             <span aria-hidden="true">·</span>
-            <span>Free Shipping {formatPrice(60)}+</span>
+            <span>Free Shipping {formatPrice(18)}+</span>
           </div>
         </div>
 
@@ -1216,10 +1323,10 @@ export function CatalogSection({
                   onChange={(e) => setPriceRange(e.target.value as PriceRange)}
                 >
                   <option value="all">Any Price</option>
-                  <option value="under25">Under {formatPrice(25)}</option>
-                  <option value="25to60">{formatPrice(25)} – {formatPrice(60)}</option>
-                  <option value="60to120">{formatPrice(60)} – {formatPrice(120)}</option>
-                  <option value="over120">{formatPrice(120)}+</option>
+                  <option value="under8">Under {formatPrice(8)}</option>
+                  <option value="8to14">{formatPrice(8)} – {formatPrice(14)}</option>
+                  <option value="14to24">{formatPrice(14)} – {formatPrice(24)}</option>
+                  <option value="over24">{formatPrice(24)}+</option>
                 </select>
                 <ChevronDown
                   size={15}

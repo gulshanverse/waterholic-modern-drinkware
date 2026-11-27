@@ -214,3 +214,72 @@ export function triggerSwipeUpAddHaptic(
   triggerAddToBagHaptic(addBtnEl, { pulseBagTrigger: true, skipVibrate: true });
 }
 
+/**
+ * Launches a lightweight compositor-only particle from a clicked '+' quick-add
+ * button toward the header shopping bag trigger (#bag-trigger).
+ * Automatically skips when prefers-reduced-motion is enabled.
+ */
+export function triggerFlyToBagAnimation(originEl: HTMLElement | null | undefined) {
+  if (typeof window === 'undefined' || !originEl) return;
+
+  const reducedMotion = window.matchMedia(
+    '(prefers-reduced-motion: reduce)'
+  ).matches;
+  if (reducedMotion) return;
+
+  const bagBtn = document.getElementById('bag-trigger');
+  if (!bagBtn) return;
+
+  const originRect = originEl.getBoundingClientRect();
+  const targetRect = bagBtn.getBoundingClientRect();
+  if (!originRect.width || !targetRect.width) return;
+
+  const startX = originRect.left + originRect.width / 2;
+  const startY = originRect.top + originRect.height / 2;
+  const endX = targetRect.left + targetRect.width / 2;
+  const endY = targetRect.top + targetRect.height / 2;
+
+  const dot = document.createElement('span');
+  dot.className = 'gsap-fly-bag-dot';
+  dot.setAttribute('aria-hidden', 'true');
+  dot.style.left = `${startX}px`;
+  dot.style.top = `${startY}px`;
+  document.body.appendChild(dot);
+
+  const dx = endX - startX;
+  const dy = endY - startY;
+
+  gsap
+    .timeline({
+      onComplete: () => {
+        dot.remove();
+      },
+    })
+    .fromTo(
+      dot,
+      {
+        x: 0,
+        y: 0,
+        scale: 0.65,
+        opacity: 0.95,
+      },
+      {
+        x: dx * 0.42,
+        y: dy * 0.48 - 44,
+        scale: 1.15,
+        opacity: 1,
+        duration: 0.22,
+        ease: 'power2.out',
+      }
+    )
+    .to(dot, {
+      x: dx,
+      y: dy,
+      scale: 0.35,
+      opacity: 0,
+      duration: 0.28,
+      ease: 'power2.in',
+    });
+}
+
+

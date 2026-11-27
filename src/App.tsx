@@ -216,7 +216,7 @@ const FINISH_META: Record<
     name: 'Rose Pink',
     dot: '#E495A6',
     filter: 'sepia(0.36) hue-rotate(304deg) saturate(1.45) brightness(1.08)',
-    premiumDelta: 40,
+    premiumDelta: 6,
   },
   transparent: {
     name: 'Transparent',
@@ -238,9 +238,9 @@ const FINISH_META: Record<
 };
 
 const SIZE_OPTIONS: { size: SizeLabel; price: number; scale: number }[] = [
-  { size: '750 ml', price: 42, scale: 0.94 },
-  { size: '950 ml', price: 48, scale: 1.0 },
-  { size: '1.2 L', price: 54, scale: 1.06 },
+  { size: '750 ml', price: 10, scale: 0.94 },
+  { size: '950 ml', price: 12, scale: 1.0 },
+  { size: '1.2 L', price: 14, scale: 1.06 },
 ];
 
 const SHOWCASE_STAGES = [
@@ -300,7 +300,7 @@ export default function App() {
   const soundscapeEngineRef = useRef<AtmosphericSoundscapeEngine | null>(null);
   const [finish, setFinish] = useState<FinishId>('blue');
   const [size, setSize] = useState<SizeLabel>('950 ml');
-  const [price, setPrice] = useState<number>(48);
+  const [price, setPrice] = useState<number>(12);
   const [activeStage, setActiveStage] = useState<number>(0);
   const [captionBlur, setCaptionBlur] = useState<boolean>(false);
   const [hasSwipedShowcase, setHasSwipedShowcase] = useState<boolean>(false);
@@ -487,7 +487,7 @@ export default function App() {
     finish: FinishId;
     size: SizeLabel;
     price: number;
-  }>({ finish: 'blue', size: '950 ml', price: 48 });
+  }>({ finish: 'blue', size: '950 ml', price: 12 });
 
   // Keep Auto circadian theme synced to local clock every minute
   useEffect(() => {
@@ -1321,11 +1321,11 @@ export default function App() {
     selectedConfigRef.current = {
       finish: 'blue',
       size: '950 ml',
-      price: 48,
+      price: 12,
     };
     setFinish('blue');
     setSize('950 ml');
-    setPrice(48);
+    setPrice(12);
     setEngravingEnabled(true);
     setEngravingText('ALEX');
     setEngravingFont('serif');
@@ -1900,7 +1900,7 @@ export default function App() {
               <span className="launch-ribbon-dot" aria-hidden="true" />
               <span className="launch-ribbon-text">
                 <strong>Global Launch Edition</strong> · Free Laser Monogramming
-                &amp; Express Shipping {formatCurrencyPrice(60, profile.country)}+
+                &amp; Express Shipping {formatCurrencyPrice(18, profile.country)}+
               </span>
               <button
                 type="button"
@@ -2436,7 +2436,7 @@ export default function App() {
             onClick={() => setMobileMenuOpen(false)}
           >
             <span>
-              Curated Ritual Sets (Save {formatCurrencyPrice(26, profile.country)})
+              Curated Ritual Sets (Save {formatCurrencyPrice(8, profile.country)})
             </span>
             <span aria-hidden="true">→</span>
           </a>

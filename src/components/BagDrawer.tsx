@@ -35,7 +35,7 @@ export interface BagLineItem {
   gift?: BagItemGiftOptions;
 }
 
-export const GIFT_WRAP_UNIT_FEE = 5;
+export const GIFT_WRAP_UNIT_FEE = 2;
 const MAX_GIFT_MESSAGE_LENGTH = 180;
 const MAX_RECIPIENT_LENGTH = 60;
 
@@ -91,8 +91,8 @@ interface BagDrawerProps {
   onViewOrderInProfile: () => void;
 }
 
-const FREE_SHIPPING_THRESHOLD = 60;
-const STANDARD_SHIPPING_FEE = 6;
+const FREE_SHIPPING_THRESHOLD = 18;
+const STANDARD_SHIPPING_FEE = 2;
 
 const PROMO_CODES: Record<
   string,

@@ -108,8 +108,8 @@ const CAMPUS_BUNDLES: CampusBundle[] = [
       'Protective Matte Silicone Bottle Boot',
       'Brushed Steel Reusable Straw 6-Pack',
     ],
-    bundlePrice: 58,
-    regularPrice: 70,
+    bundlePrice: 14,
+    regularPrice: 18,
     image: campusStudyImg,
   },
   {
@@ -121,8 +121,8 @@ const CAMPUS_BUNDLES: CampusBundle[] = [
       'Nordic Borosilicate Bedside Carafe Set (850 ml)',
       'Effervescent Bottle Cleaning Tablets (36-Pack)',
     ],
-    bundlePrice: 114,
-    regularPrice: 132,
+    bundlePrice: 24,
+    regularPrice: 30,
     image: campusDormImg,
   },
   {
@@ -134,8 +134,8 @@ const CAMPUS_BUNDLES: CampusBundle[] = [
       'Commuter 360° Spill-Lock Thermal Mug (500 ml)',
       'Alpine Citrus Daily Electrolyte Sticks (30-Pack)',
     ],
-    bundlePrice: 142,
-    regularPrice: 167,
+    bundlePrice: 28,
+    regularPrice: 35,
     image: campusGymImg,
   },
 ];

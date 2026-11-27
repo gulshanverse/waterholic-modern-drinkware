@@ -190,7 +190,7 @@ export function PressAndGuaranteeStrip({
             const Icon = g.icon;
             const detailText =
               g.title === 'Carbon-Neutral Express'
-                ? `Complimentary dispatch on orders ${formatPrice(60)}+ worldwide.`
+                ? `Complimentary dispatch on orders ${formatPrice(18)}+ worldwide.`
                 : g.detail;
             return (
               <div key={g.title} className="guarantee-item">
@@ -233,7 +233,7 @@ const RITUAL_BUNDLE_DEFS: RitualBundleDefinition[] = [
     name: 'The Executive Desk Ritual',
     tagline:
       'All-day thermal precision from morning espresso to late-night desk refills, anchored by a borosilicate bedside carafe.',
-    savings: 18,
+    savings: 5,
     image: deskRitualImg,
     imageAlt: 'Waterholic Executive Desk Ritual insulated vessels in studio light',
     productNames: [
@@ -253,7 +253,7 @@ const RITUAL_BUNDLE_DEFS: RitualBundleDefinition[] = [
     name: 'The Alpine Weekend Kit',
     tagline:
       'Grade 1 titanium ultralight carry paired with basecamp 1.5L reserve capacity and backcountry gravity filtration.',
-    savings: 24,
+    savings: 7,
     image: alpineKitImg,
     imageAlt: 'Waterholic Alpine Weekend hydration kit in mountain lighting',
     productNames: [
@@ -273,7 +273,7 @@ const RITUAL_BUNDLE_DEFS: RitualBundleDefinition[] = [
     name: 'The Atelier Collector Reserve',
     tagline:
       'Our flagship Rose Quartz copper-core vessel, UV-C self-cleaning purifier, and 40 oz studio quencher in one curated presentation.',
-    savings: 26,
+    savings: 8,
     image: campusReserveImg,
     imageAlt: 'Waterholic Atelier Collector Reserve three-vessel luxury set',
     productNames: [
@@ -371,7 +371,7 @@ export function CuratedRitualBundles({
         product,
         finish: matchedFinish,
         sizeLabel: `${defaultSize} · ${bundle.name.replace(/^The\s+/i, '')}`,
-        unitPrice: Math.max(12, product.price - discountSlice),
+        unitPrice: Math.max(3, product.price - discountSlice),
         qty: 1,
       });
     });
@@ -395,7 +395,7 @@ export function CuratedRitualBundles({
         <div className="launch-section-head">
           <div>
             <span className="launch-eyebrow">
-              Curated Launch Editions · Save up to {formatPrice(26)}
+              Curated Launch Editions · Save up to {formatPrice(8)}
             </span>
             <h2 id="bundles-heading" className="section-title">
               Ritual sets, calibrated together.

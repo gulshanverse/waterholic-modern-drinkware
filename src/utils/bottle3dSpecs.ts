@@ -53,7 +53,7 @@ export const STUDIO_FINISHES: StudioFinishSpec[] = [
     roughness: 0.36,
     metalness: 0.3,
     clearcoat: 0.45,
-    priceDelta: 40,
+    priceDelta: 6,
     bootHex: '#8E495A',
     logoInk: '#FFF5F7',
   },
@@ -104,7 +104,7 @@ export const SIZE_SPECS: Record<StudioSizeKey, StudioSizeSpec> = {
   '750 ml': {
     scaleY: 0.9,
     scaleXZ: 0.95,
-    price: 42,
+    price: 10,
     label: '750 ML',
     heightCm: 24.8,
     diameterCm: 8.6,
@@ -115,7 +115,7 @@ export const SIZE_SPECS: Record<StudioSizeKey, StudioSizeSpec> = {
   '950 ml': {
     scaleY: 1.0,
     scaleXZ: 1.0,
-    price: 48,
+    price: 12,
     label: '950 ML',
     heightCm: 27.6,
     diameterCm: 9.0,
@@ -126,7 +126,7 @@ export const SIZE_SPECS: Record<StudioSizeKey, StudioSizeSpec> = {
   '1.2 L': {
     scaleY: 1.12,
     scaleXZ: 1.05,
-    price: 54,
+    price: 14,
     label: '1.2 L',
     heightCm: 30.9,
     diameterCm: 9.5,

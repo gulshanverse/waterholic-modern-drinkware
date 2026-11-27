@@ -30,8 +30,8 @@ const FOOTER_DOCS: Record<FooterDocKey, FooterDocContent> = {
       'Every Waterholic vessel ships in 100% plastic-free recyclable kraft packaging from regional fulfillment hubs.',
     points: [
       {
-        heading: 'Free Express Shipping ($60+)',
-        body: 'Orders of $60 or more automatically qualify for complimentary 2–4 business day tracked express delivery. Standard shipping on smaller orders is a flat $6.',
+        heading: 'Free Express Shipping',
+        body: 'Qualifying orders automatically receive complimentary 2–4 business day tracked express delivery, with a low flat shipping fee on smaller orders.',
       },
       {
         heading: '45-Day Colour Exchange & Returns',
@@ -298,8 +298,8 @@ export function SiteFooter({
           points: baseDoc.points.map((pt, i) =>
             i === 0
               ? {
-                  heading: `Free Express Shipping (${formatPrice(60)}+)`,
-                  body: `Orders of ${formatPrice(60)} or more automatically qualify for complimentary 2–4 business day tracked express delivery. Standard shipping on smaller orders is a flat ${formatPrice(6)}.`,
+                  heading: `Free Express Shipping (${formatPrice(18)}+)`,
+                  body: `Orders of ${formatPrice(18)} or more automatically qualify for complimentary 2–4 business day tracked express delivery. Standard shipping on smaller orders is a flat ${formatPrice(2)}.`,
                 }
               : pt
           ),

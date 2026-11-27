@@ -17,6 +17,7 @@ import {
   type ShareMode,
 } from './ShareHydrationModal';
 import { MilestoneBadgesPanel } from './MilestoneBadgesPanel';
+import { WeeklyHydrationChart } from './WeeklyHydrationChart';
 import {
   evaluateMilestones,
   type MilestoneBadgeId,
@@ -165,9 +166,9 @@ export function ProfileDrawer({
 
   const lifetimeSpent = orders.reduce((sum, o) => sum + o.total, 0);
   const memberTier =
-    lifetimeSpent >= 250
+    lifetimeSpent >= 60
       ? 'Glacier Elite'
-      : lifetimeSpent >= 90
+      : lifetimeSpent >= 24
         ? 'Alpine Club'
         : 'Hydration Member';
 
@@ -415,6 +416,16 @@ export function ProfileDrawer({
                   </button>
                 </div>
               </div>
+
+              {/* Weekly Hydration Trends (Last 7 Days, Recharts) */}
+              {open && (
+                <WeeklyHydrationChart
+                  dailyTotals={milestoneStats.dailyTotals}
+                  todayKey={hydration.dateKey}
+                  todayConsumedMl={hydration.consumedMl}
+                  dailyGoalMl={profile.dailyGoalMl}
+                />
+              )}
 
               {/* Milestone Badges & Dynamic Animated SVG Medals */}
               <MilestoneBadgesPanel

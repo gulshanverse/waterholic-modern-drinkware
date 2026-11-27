@@ -77,7 +77,7 @@ export function SupportSection({
             <span aria-hidden="true">·</span>
             <span>45-Day Returns</span>
             <span aria-hidden="true">·</span>
-            <span>Free Express {formatPrice(60)}+</span>
+            <span>Free Express {formatPrice(18)}+</span>
           </div>
         </div>
 
@@ -90,7 +90,7 @@ export function SupportSection({
                 const isOpen = openFaq === idx;
                 const answerText =
                   item.q === 'What is the shipping speed and return window?'
-                    ? `Orders over ${formatPrice(60)} qualify automatically for Free Express Shipping (2–4 business days). Unused gear can be returned or exchanged for another colour within 45 days at zero restocking fee.`
+                    ? `Orders over ${formatPrice(18)} qualify automatically for Free Express Shipping (2–4 business days). Unused gear can be returned or exchanged for another colour within 45 days at zero restocking fee.`
                     : item.a;
                 return (
                   <div key={item.q} className="faq-item">

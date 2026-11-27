@@ -88,7 +88,7 @@ const STUDIO_FINISHES: StudioFinishSpec[] = [
     roughness: 0.36,
     metalness: 0.3,
     clearcoat: 0.45,
-    priceDelta: 40,
+    priceDelta: 6,
     bootHex: '#8E495A',
     logoInk: '#FFF5F7',
   },
@@ -139,9 +139,9 @@ const SIZE_SPECS: Record<
   StudioSizeKey,
   { scaleY: number; scaleXZ: number; price: number; label: string }
 > = {
-  '750 ml': { scaleY: 0.9, scaleXZ: 0.95, price: 42, label: '750 ML' },
-  '950 ml': { scaleY: 1.0, scaleXZ: 1.0, price: 48, label: '950 ML' },
-  '1.2 L': { scaleY: 1.12, scaleXZ: 1.05, price: 54, label: '1.2 L' },
+  '750 ml': { scaleY: 0.9, scaleXZ: 0.95, price: 10, label: '750 ML' },
+  '950 ml': { scaleY: 1.0, scaleXZ: 1.0, price: 12, label: '950 ML' },
+  '1.2 L': { scaleY: 1.12, scaleXZ: 1.05, price: 14, label: '1.2 L' },
 };
 
 const CAMERA_PRESETS: Record<
